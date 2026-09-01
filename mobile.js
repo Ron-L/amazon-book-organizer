@@ -1,6 +1,6 @@
 // mobile.js — ReaderWrangler Mobile Viewer
 // MOBILE_VERSION tracks mobile-specific iterations
-const MOBILE_VERSION = '1.7.0'; // suffix mirrors ORGANIZER_VERSION's -alpha.N in any alpha commit touching this file (Ron, 2026-08-30: invisible changes + no build marker = guaranteed mystery)
+const MOBILE_VERSION = '1.7.1'; // suffix mirrors ORGANIZER_VERSION's -alpha.N in any alpha commit touching this file (Ron, 2026-08-30: invisible changes + no build marker = guaranteed mystery)
 console.log(`✅ Mobile viewer ${MOBILE_VERSION} | APP_VERSION: ${APP_VERSION}`);
 
 // v1.7.0 - Which server is this copy talking to? Derived from the page's own address, so an
@@ -76,7 +76,7 @@ function mapBackupBook(item) {
     };
 }
 
-function restoreOrganization(org, bookIds, sourceStamp) {
+function restoreOrganization(org, bookIds, sourceStamp, sourceGen) {
     if (!org) return;
 
     let folders = org.folders || [];
@@ -118,7 +118,11 @@ function restoreOrganization(org, bookIds, sourceStamp) {
         // §3): a wall-clock stamp here would exceed every later payload's source stamp and freeze the
         // phone's cache. One clock lineage (the desktop's) keeps the guard comparison monotone.
         lastSyncTime: sourceStamp || Date.now(),
-        savedAt: sourceStamp || Date.now()
+        savedAt: sourceStamp || Date.now(),
+        // v1.7.1 - WHICH generation this cache came from: freshness is gen identity, not a
+        // timestamp race (the save stamp is always older than the push's gen time by the
+        // debounce gap — comparing them made the banner nag forever on a fully-synced phone)
+        deviceStateGen: sourceGen || null
     }));
 
     return folders;
@@ -2488,11 +2492,21 @@ function MobileApp() {
                 window.RWRelay.initFromStorage();
                 const gen = await window.RWRelay.getDeviceStatePointerGen?.();
                 if (!gen) return;
-                const genTime = (window.RWRelay.genTimestamp?.(gen)) || 0;
-                const localStamp = (() => { try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}').savedAt || 0; } catch (e) { return 0; } })();
-                if (genTime > localStamp + 5000 && gen !== dismissedGenRef.current) {
+                // v1.7.1 - Freshness = GENERATION IDENTITY: is the pointed gen the one this cache
+                // came from? The old timestamp compare raced the save stamp against the push time —
+                // always ~a debounce apart — so a fully-synced phone nagged forever. Caches that
+                // predate the gen record fall back to timestamps with a WIDE margin (15 min).
+                const blob = (() => { try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'); } catch (e) { return {}; } })();
+                let newer;
+                if (blob.deviceStateGen) {
+                    newer = gen !== blob.deviceStateGen;
+                } else {
+                    const genTime = (window.RWRelay.genTimestamp?.(gen)) || 0;
+                    newer = genTime > (blob.savedAt || 0) + 15 * 60 * 1000;
+                }
+                if (newer && gen !== dismissedGenRef.current) {
                     setNewerAvailable(gen);
-                } else if (genTime <= localStamp + 5000) {
+                } else if (!newer) {
                     setNewerAvailable(null);
                 }
             } catch (e) { /* freshness is best-effort */ }
@@ -2560,7 +2574,8 @@ function MobileApp() {
                         const payloadSavedAt = data.organization?.savedAt || 0;
                         if (payloadSavedAt > localSavedAt || !localSavedAt) {
                             await saveBooksToIndexedDB(mappedBooks, false);
-                            restoreOrganization(data.organization, mappedBooks.map(b => b.id), payloadSavedAt);
+                            restoreOrganization(data.organization, mappedBooks.map(b => b.id), payloadSavedAt,
+                                window.RWRelay.lastDeviceStateGen ? window.RWRelay.lastDeviceStateGen() : null); // v1.7.1
                             console.log('✅ Device-state applied to local storage');
                         } else {
                             console.log(`🛡️ Cache write skipped — local data is newer (guest guard; payload ${payloadSavedAt ? new Date(payloadSavedAt).toLocaleString() : 'unstamped'} vs local ${new Date(localSavedAt).toLocaleString()})`);
@@ -2990,7 +3005,17 @@ function MobileApp() {
                     padding: '8px 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                     fontSize: '13px', cursor: 'pointer', touchAction: 'manipulation'
                 }}>
-                    <span style={{ color: '#1e293b' }}>📡 Newer library available — tap to refresh</span>
+                    {/* v1.7.1 - Both timestamps (Ron, from the nudge's first real-world firing):
+                        information, not accusation — judge whether the delta matters before reloading */}
+                    <span style={{ color: '#1e293b' }}>
+                        {(() => {
+                            const fmt = (t) => new Date(t).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+                            const newerTime = (window.RWRelay && window.RWRelay.genTimestamp) ? window.RWRelay.genTimestamp(newerAvailable) : 0;
+                            return (libraryAsOf && newerTime)
+                                ? `📡 Your library is from ${fmt(libraryAsOf)} — a newer one from ${fmt(newerTime)} is available. Tap to refresh.`
+                                : '📡 Newer library available — tap to refresh';
+                        })()}
+                    </span>
                     <button onClick={(e) => { e.stopPropagation(); dismissedGenRef.current = newerAvailable; setNewerAvailable(null); }}
                         style={{ background: 'none', border: 'none', color: '#64748b', fontSize: '16px', cursor: 'pointer', padding: '0 4px', touchAction: 'manipulation' }}
                         aria-label="Dismiss">✕</button>

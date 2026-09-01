@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [7.6.1] - 2026-09-01
+
+### Fixed: the "newer library available" banner nagging a fully-synced phone
+- The freshness check compared two timestamps that are *always* about a minute apart (when the desktop **saved** vs. when it **pushed**), so after a phone synced perfectly the banner still claimed newer data existed — forever. Freshness is now judged the right way: *is the copy on my phone the exact one the cloud is pointing at?* Same copy → quiet; different copy → banner.
+- The banner also says more now: *"Your library is from 3:04 PM — a newer one from 5:04 PM is available. Tap to refresh."* — information, not accusation.
+
 ## [7.6.0] - 2026-09-01
 
 ### Folders, ordered your way

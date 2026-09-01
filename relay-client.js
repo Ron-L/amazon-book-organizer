@@ -37,6 +37,7 @@
   let _channelId = null;
   let _passphrase = null;
   let _cryptoKey = null; // Cached after first derivation
+  let _lastDstateGen = null; // v7.6.1 - generation getDeviceState last SERVED (freshness = gen identity, not timestamps)
 
   // Worker URL override for dev/testing (set window._RW_RELAY_WORKER_URL before load/use).
   function workerUrl() {
@@ -333,7 +334,7 @@
       if (p.ok) pointedGen = (await p.json()).gen;
     } catch { /* fall through */ }
     if (pointedGen) {
-      try { return await tryDstateGen(pointedGen); }
+      try { const out = await tryDstateGen(pointedGen); _lastDstateGen = pointedGen; return out; }
       catch { /* corrupt/missing — try list fallback */ }
     }
     try {
@@ -341,11 +342,12 @@
         .sort((a, b) => idTimestamp(b) - idTimestamp(a));
       for (const gen of gens) {
         if (gen === pointedGen) continue;
-        try { return await tryDstateGen(gen); }
+        try { const out = await tryDstateGen(gen); _lastDstateGen = gen; return out; }
         catch { /* next-newest */ }
       }
     } catch { /* fall through to legacy */ }
 
+    _lastDstateGen = null; // v7.6.1 - legacy path serves no generation
     // 2. Legacy single key (pre-journal pushes)
     const response = await fetch(`${workerUrl()}/device-state/${_channelId}`);
     if (response.status === 404) return null;
@@ -1204,6 +1206,7 @@
     cleanup: cleanup,
     getDeviceState: getDeviceState,
     getDeviceStatePointerGen: getDeviceStatePointerGen, // v7.6.0 - mobile freshness nudge
+    lastDeviceStateGen: () => _lastDstateGen, // v7.6.1 - which gen getDeviceState served (freshness identity)
     genTimestamp: idTimestamp, // v7.6.0 - commit time embedded in a minted id
     putDeviceState: putDeviceState,
     putDeviceStateJournal: putDeviceStateJournal,
