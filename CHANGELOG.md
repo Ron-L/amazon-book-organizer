@@ -5,6 +5,29 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [7.6.0] - 2026-09-01
+
+### Folders, ordered your way
+- **Pin folders to the top** 📌 — right-click any folder → *Pin to top* (multi-select works). Pinned folders float above the sort in every mode, in their own hand-arranged order — so your special folders stay on top while everything else lives in alphabetical. The 📌 on a pinned row is itself the one-click unpin. Pinning is drag-proof: you can't drag your way into or out of the pinned zone, only reorder within it.
+- **Sort folders by Name or Count** — and the control now reads the way it acts: the key name opens the sort menu, the arrow beside it flips the direction (so do the Name/Books column headers, and re-picking the current choice in the menu).
+- **New folders finally land where you can see them** — at the top of the list (just under the pins), from every door: New Folder, Create Subfolder, paste, *and* Auto-Organize, whose new author folders now arrive as an alphabetized block at the top instead of scattering near the bottom. Plus **Move to Top / Move to Bottom** on the folder menu, and "New folder here…" now actually means *here* (inside the folder you're standing in).
+- **Bake this order into Manual…** — in a sorted mode, one command makes the current order your new manual order (whole tree, undoable). With pins, you'll rarely need it — but it's there.
+
+### Your phone finally matches (Mobile 1.7.0)
+- **The same folder order as the app** — pins, manual arrangement, Name or Count mode: the drawer, the Dashboard shelves, and subfolder grids all mirror the desktop exactly.
+- **Freshness you can see** — a "Library as of ‹time›" line (Dashboard foot + About), and when newer data is waiting in the cloud, a **📡 "Newer library available — tap to refresh"** banner appears on open or when you return to the tab (one featherweight check, no polling).
+- **Honest counts** — "3,134 of 3,136 books (2 hidden by user)", where the hidden clause is a tap-target that flips Show Hidden (and back). Desktop's count line says the same.
+- **Date Added really means date added** — the field now travels to mobile and both surfaces sort by it (desktop's column had the same subtle mislabeling); ties resolve identically everywhere: author, then series, then series number. Wishlist books no longer sink to the bottom of every date sort.
+- **Which server am I on?** — About names it outright, and non-production copies wear a small DEV/LOCAL badge (the cure for the which-install-is-this mystery).
+
+### Sync, safety & fixes
+- **The folder-order scrambler is dead.** The long-unexplained "my manual order reverted!" ghost was mobile loading in the same browser as the desktop and overwriting fresher local data with a field-stripped cloud snapshot. A **guest guard** now allows a cache write only when the incoming data is genuinely newer — and nothing strips fields in transit anymore. (Full story: docs/design/MULTI-INSTANCE.md.)
+- **Undo tells the truth** — permanently deleting books also removes history entries about them (no more "Undone" toasts over nothing); a backup restore starts a clean history (old entries pointed at a replaced library); imports drop entries about books they removed.
+- **Restores reach your phone immediately** — the restore's cloud push now carries the restored organization with a fresh stamp, instead of a stale pre-restore snapshot that phones rightly ignored.
+- **Empty Trash** is now a button in the Trash view itself — and it matters beyond tidiness: emptying the Trash is what lets a deleted book be re-added from Amazon.
+- **Series fetcher v2.0.2** — books you already own now count as *present* in the series-gap check: no more false "#1 missing from Amazon's series list" for an owned first book, and real gaps above your last unowned book are detectable at last.
+- Sidebar section collapse states persist across reloads; sidebar folder drag-reorder is properly undoable; the folder context menu is grouped by what each action does.
+
 ## [7.5.1] - 2026-09-01
 
 ### Fixed: a cloud-storage leak

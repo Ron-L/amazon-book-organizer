@@ -1,6 +1,6 @@
 // mobile.js — ReaderWrangler Mobile Viewer
 // MOBILE_VERSION tracks mobile-specific iterations
-const MOBILE_VERSION = '1.7.0-alpha.25'; // suffix mirrors ORGANIZER_VERSION's -alpha.N in any alpha commit touching this file (Ron, 2026-08-30: invisible changes + no build marker = guaranteed mystery)
+const MOBILE_VERSION = '1.7.0'; // suffix mirrors ORGANIZER_VERSION's -alpha.N in any alpha commit touching this file (Ron, 2026-08-30: invisible changes + no build marker = guaranteed mystery)
 console.log(`✅ Mobile viewer ${MOBILE_VERSION} | APP_VERSION: ${APP_VERSION}`);
 
 // v1.7.0 - Which server is this copy talking to? Derived from the page's own address, so an
@@ -2463,7 +2463,7 @@ function MobileApp() {
     const [showDealsOnly, setShowDealsOnly] = useState(savedPrefs.showDealsOnly || false);
     const [showHidden, setShowHidden] = useState(savedPrefs.showHidden || false);
     const [folderListSort, setFolderListSort] = useState(null); // v1.7.0-alpha.13 - desktop folder-tree sort mode (order mirror)
-    // v1.7.0-alpha.24 - Freshness nudge state (FOLDER... see TODO 'mobile freshness nudge'):
+    // v1.7.0-alpha.24 - Freshness nudge state:
     // libraryAsOf = the cached payload's source stamp (staleness made legible);
     // newerAvailable = pointer gen newer than the cache → banner; dismissible per-gen.
     const [libraryAsOf, setLibraryAsOf] = useState(null);
