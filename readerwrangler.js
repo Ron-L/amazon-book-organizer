@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "7.6.0-alpha.14";  // Build version for this file
+        const ORGANIZER_VERSION = "7.6.0-alpha.15";  // Build version for this file
 
         // v6.19.0 - Dev environments talk to the DEV relay worker (isolated KV namespace), so
         // local/dev testing can never touch production relay data. Mirrors the nav-hub's rule,
@@ -869,6 +869,7 @@
                 explorerDropTargetRef.current = el;
             };
             const [explorerDragData, setExplorerDragData] = useState(null); // { sourceFolder, bookIds } for drag validity checks
+            const draggedFoldersAllPinnedRef = useRef(false); // v7.6.0-alpha.15 - right-pane reorder gate: pin-zone drags are allowed in sorted modes (dragover can't read the payload, so dragstart records this)
             // v5.5.4-alpha.23 - Drag virtualization refs (hide off-screen rows during drag)
             const dragVirtScrollRef = useRef(null);    // Scroll container element
             const dragVirtContainerRef = useRef(null);  // tbody (list) or grid div
@@ -2753,8 +2754,10 @@
                     label: `Bake ${modeLabel} order into Manual`,
                     description: `Bake ${modeLabel} order into Manual`
                 });
-                setFolderListSort({ column: 'custom', direction: 'asc' });
-                showToast(`Manual order is now the ${modeLabel} order`);
+                // v7.6.0-alpha.15 (#6, Ron) - NO auto-switch to Manual: the baked manual order IS the
+                // displayed order, so staying put changes nothing on screen — zero surprise, no hidden
+                // second effect. Switching to Manual later shows the identical order.
+                showToast(`Manual order now matches the ${modeLabel} order — switch to Manual to tweak it`);
             };
 
             // v5.0.0-alpha.78 - Phase D: Reparent folder (move into another folder) with undo
@@ -13596,7 +13599,8 @@
                                                                 const active = folderListSort.column === opt.col;
                                                                 return (
                                                                     <div key={opt.label} className={`px-3 py-1.5 text-xs hover:bg-gray-100 cursor-pointer flex items-center gap-2 ${active ? 'text-blue-600 font-medium' : 'text-gray-700'}`}
-                                                                        onClick={() => { setFolderListSort({ column: opt.col, direction: opt.dir }); setFolderSortMenuOpen(false); }}>
+                                                                        title={active && opt.col !== 'custom' ? 'Click again to reverse the direction' : undefined}
+                                                                        onClick={() => { setFolderListSort(prev => (prev.column === opt.col && opt.col !== 'custom') ? { column: prev.column, direction: prev.direction === 'asc' ? 'desc' : 'asc' } : { column: opt.col, direction: opt.dir }); setFolderSortMenuOpen(false); }}>
                                                                         <span className="w-3">{active ? '✓' : ''}</span><span>{opt.label}</span>
                                                                     </div>
                                                                 );
@@ -14575,7 +14579,8 @@
                                                                 const active = folderListSort.column === opt.col;
                                                                 return (
                                                                     <div key={opt.label} className={`px-3 py-1.5 text-sm hover:bg-gray-100 cursor-pointer flex items-center gap-2 ${active ? 'text-blue-600 font-medium' : 'text-gray-700'}`}
-                                                                        onClick={() => { setFolderListSort({ column: opt.col, direction: opt.dir }); setFolderSortPickerOpen(false); }}>
+                                                                        title={active && opt.col !== 'custom' ? 'Click again to reverse the direction' : undefined}
+                                                                        onClick={() => { setFolderListSort(prev => (prev.column === opt.col && opt.col !== 'custom') ? { column: prev.column, direction: prev.direction === 'asc' ? 'desc' : 'asc' } : { column: opt.col, direction: opt.dir }); setFolderSortPickerOpen(false); }}>
                                                                         <span className="w-3">{active ? '✓' : ''}</span><span>{opt.label}</span>
                                                                     </div>
                                                                 );
@@ -15161,7 +15166,10 @@
 
                                                     // v5.0.0-alpha.88 - Allow folder reordering in Folders section (Inbox protected by isDraggable=false)
                                                     // v5.0.8 - Folders CAN be reordered in Folders section (unlike books), just not in All Books
-                                                    const canReorderFolders = folderListSort.column === 'custom' &&
+                                                    // v7.6.0-alpha.15 - Pin-zone drags allowed in sorted modes (matches the left pane
+                                                    // and the wave-B "manual mini-list in every mode" design; the canonical clamp
+                                                    // keeps them inside the zone)
+                                                    const canReorderFolders = (folderListSort.column === 'custom' || draggedFoldersAllPinnedRef.current) &&
                                                         selectedFolderId !== '__all__';
                                                     const parentForReorder = selectedFolderId === '__library__' ? null : selectedFolderId;
 
@@ -15227,6 +15235,7 @@
                                                                     const folderIds = isSelected(folder.id) && getSelectedFolderIds().length > 1
                                                                         ? getSelectedFolderIds() : [folder.id];
                                                                     const selectedBooks = getSelectedBookIds();
+                                                                    draggedFoldersAllPinnedRef.current = folderIds.length > 0 && folderIds.every(id => folders.find(f => f.id === id)?.pinned); // v7.6.0-alpha.15
                                                                     e.dataTransfer.setData('application/x-folder-reorder', JSON.stringify({
                                                                         folderIds, parentId: parentForReorder
                                                                     }));
@@ -15594,6 +15603,7 @@
                                                                 const selectedBooks = isSelected(book.id) && getSelectedBookIds().length > 1
                                                                     ? getSelectedBookIds() : [book.id];
                                                                 const selectedFolders = getSelectedFolderIds();
+                                                                draggedFoldersAllPinnedRef.current = selectedFolders.length > 0 && selectedFolders.every(id => folders.find(f => f.id === id)?.pinned); // v7.6.0-alpha.15
                                                                 const dragData = {
                                                                     sourceFolder: selectedFolderId,
                                                                     bookIds: selectedBooks
@@ -15917,7 +15927,8 @@
                                                 }
 
                                                 // v5.0.0-alpha.88 - Allow folder reordering in Folders section (Inbox protected by isDraggable=false)
-                                                const canReorderFolders = folderListSort.column === 'custom' &&
+                                                // v7.6.0-alpha.15 - Pin-zone drags allowed in sorted modes (see the list-view twin)
+                                                const canReorderFolders = (folderListSort.column === 'custom' || draggedFoldersAllPinnedRef.current) &&
                                                     selectedFolderId !== '__all__';
                                                 const parentForReorder = selectedFolderId === '__library__' ? null : selectedFolderId;
 
@@ -15969,6 +15980,7 @@
                                                             const covFolderIds = isSelected(folder.id) && getSelectedFolderIds().length > 1
                                                                 ? getSelectedFolderIds() : [folder.id];
                                                             const selectedBooks = getSelectedBookIds();
+                                                            draggedFoldersAllPinnedRef.current = covFolderIds.length > 0 && covFolderIds.every(id => folders.find(f => f.id === id)?.pinned); // v7.6.0-alpha.15
                                                             e.dataTransfer.setData('application/x-folder-reorder', JSON.stringify({
                                                                 folderIds: covFolderIds, parentId: parentForReorder
                                                             }));
@@ -16217,6 +16229,7 @@
                                                                     parentId: selectedFolderId === '__library__' ? null : selectedFolderId
                                                                 }));
                                                             }
+                                                            draggedFoldersAllPinnedRef.current = selectedFolders.length > 0 && selectedFolders.every(id => folders.find(f => f.id === id)?.pinned); // v7.6.0-alpha.15
                                                             setExplorerDragData(dragData);
                                                             if (!isSelected(book.id)) {
                                                                 setExplorerSelectedItems(new Set([book.id]));
@@ -17171,6 +17184,43 @@
                                     </div>
                                 )}
 
+                                {/* Create Subfolder */}
+                                {/* v7.6.0-alpha.15 - Grouped with Open/Rename (the "this folder itself, in place" group:
+                                    enter it, name it, add inside it) — it was orphaned between the move block and clipboard
+                                    (Ron, wave D testing). Creation-near-top is also the JetBrains/VS Code convention. */}
+                                <div
+                                    className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-3"
+                                    role="menuitem"
+                                    onClick={() => {
+                                        const newFolder = {
+                                            id: `folder-${Date.now()}`,
+                                            name: 'New Subfolder',
+                                            parentId: folder.id,
+                                            bookIds: [],
+                                            childFolderIds: [],
+                                            collapsed: false
+                                        };
+                                        recordAction({
+                                            type: 'CREATE_FOLDER',
+                                            folderId: newFolder.id,
+                                            parentId: folder.id,
+                                            folder: { ...newFolder }
+                                        });
+                                        // v7.6.0-alpha.11 (wave C) - place at top of the parent's children
+                                        setFolders(prev => placeNewFoldersAtTop([
+                                            ...prev.map(f => f.id === folder.id ? { ...f, collapsed: false } : f),
+                                            newFolder
+                                        ], [newFolder]));
+                                        navigateToFolder(newFolder.id);
+                                        setEditingFolderId(newFolder.id);
+                                        setEditingFolderName('New Subfolder');
+                                        setIsPlaceholderMode(true); // v5.0.0-alpha.134 - Show as placeholder
+                                        setFolderContextMenu(null);
+                                    }}>
+                                    <span>➕</span>
+                                    <span>Create Subfolder</span>
+                                </div>
+
                                 <div className="border-t border-gray-200 my-1" role="separator"></div>
 
                                 {/* Move to - v5.0.0-alpha.137 */}
@@ -17341,40 +17391,6 @@
                                         </div>
                                     );
                                 })()}
-
-                                {/* Create Subfolder */}
-                                <div
-                                    className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-3"
-                                    role="menuitem"
-                                    onClick={() => {
-                                        const newFolder = {
-                                            id: `folder-${Date.now()}`,
-                                            name: 'New Subfolder',
-                                            parentId: folder.id,
-                                            bookIds: [],
-                                            childFolderIds: [],
-                                            collapsed: false
-                                        };
-                                        recordAction({
-                                            type: 'CREATE_FOLDER',
-                                            folderId: newFolder.id,
-                                            parentId: folder.id,
-                                            folder: { ...newFolder }
-                                        });
-                                        // v7.6.0-alpha.11 (wave C) - place at top of the parent's children
-                                        setFolders(prev => placeNewFoldersAtTop([
-                                            ...prev.map(f => f.id === folder.id ? { ...f, collapsed: false } : f),
-                                            newFolder
-                                        ], [newFolder]));
-                                        navigateToFolder(newFolder.id);
-                                        setEditingFolderId(newFolder.id);
-                                        setEditingFolderName('New Subfolder');
-                                        setIsPlaceholderMode(true); // v5.0.0-alpha.134 - Show as placeholder
-                                        setFolderContextMenu(null);
-                                    }}>
-                                    <span>➕</span>
-                                    <span>Create Subfolder</span>
-                                </div>
 
                                 <div className="border-t border-gray-200 my-1" role="separator"></div>
 
