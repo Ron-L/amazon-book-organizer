@@ -1,6 +1,6 @@
 // mobile.js — ReaderWrangler Mobile Viewer
 // MOBILE_VERSION tracks mobile-specific iterations
-const MOBILE_VERSION = '1.7.0-alpha.24'; // suffix mirrors ORGANIZER_VERSION's -alpha.N in any alpha commit touching this file (Ron, 2026-08-30: invisible changes + no build marker = guaranteed mystery)
+const MOBILE_VERSION = '1.7.0-alpha.25'; // suffix mirrors ORGANIZER_VERSION's -alpha.N in any alpha commit touching this file (Ron, 2026-08-30: invisible changes + no build marker = guaranteed mystery)
 console.log(`✅ Mobile viewer ${MOBILE_VERSION} | APP_VERSION: ${APP_VERSION}`);
 
 // v1.7.0 - Which server is this copy talking to? Derived from the page's own address, so an
@@ -2471,6 +2471,38 @@ function MobileApp() {
     const dismissedGenRef = useRef(null);
     const lastFreshCheckRef = useRef(0);
 
+    // v1.7.0-alpha.24 - Freshness check: on load + every tab-return (60s dedupe), ONE KV read of
+    // the device-state pointer; the gen id's prefix is its commit time, compared against the
+    // cache's source stamp (same clock lineage as the guest guard — on a dev machine the local
+    // cache is always fresh, so the banner correctly never fires there).
+    // v1.7.0-alpha.25 - MOVED here with the other top-level hooks: it originally sat below the
+    // component's conditional early-returns, varying the hook count between the loading render
+    // and the loaded one — React #310 crash on any reload (found by TinySuspender, of all things).
+    useEffect(() => {
+        const check = async () => {
+            try {
+                const creds = JSON.parse(localStorage.getItem(RELAY_KEY) || 'null');
+                if (!creds || !creds.channelId || !window.RWRelay) return;
+                if (Date.now() - lastFreshCheckRef.current < 60000) return;
+                lastFreshCheckRef.current = Date.now();
+                window.RWRelay.initFromStorage();
+                const gen = await window.RWRelay.getDeviceStatePointerGen?.();
+                if (!gen) return;
+                const genTime = (window.RWRelay.genTimestamp?.(gen)) || 0;
+                const localStamp = (() => { try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}').savedAt || 0; } catch (e) { return 0; } })();
+                if (genTime > localStamp + 5000 && gen !== dismissedGenRef.current) {
+                    setNewerAvailable(gen);
+                } else if (genTime <= localStamp + 5000) {
+                    setNewerAvailable(null);
+                }
+            } catch (e) { /* freshness is best-effort */ }
+        };
+        const t = setTimeout(check, 3000); // after the initial load settles
+        const onVis = () => { if (document.visibilityState === 'visible') check(); };
+        document.addEventListener('visibilitychange', onVis);
+        return () => { clearTimeout(t); document.removeEventListener('visibilitychange', onVis); };
+    }, []);
+
     const savePrefs = (updates) => {
         const current = JSON.parse(localStorage.getItem(MOBILE_PREFS_KEY) || '{}');
         localStorage.setItem(MOBILE_PREFS_KEY, JSON.stringify({ ...current, ...updates }));
@@ -2946,35 +2978,6 @@ function MobileApp() {
     }
 
     const hasBooks = books.length > 0;
-
-    // v1.7.0-alpha.24 - Freshness check: on load + every tab-return (60s dedupe), ONE KV read of
-    // the device-state pointer; the gen id's prefix is its commit time, compared against the
-    // cache's source stamp (same clock lineage as the guest guard — on a dev machine the local
-    // cache is always fresh, so the banner correctly never fires there).
-    useEffect(() => {
-        const check = async () => {
-            try {
-                const creds = JSON.parse(localStorage.getItem(RELAY_KEY) || 'null');
-                if (!creds || !creds.channelId || !window.RWRelay) return;
-                if (Date.now() - lastFreshCheckRef.current < 60000) return;
-                lastFreshCheckRef.current = Date.now();
-                window.RWRelay.initFromStorage();
-                const gen = await window.RWRelay.getDeviceStatePointerGen?.();
-                if (!gen) return;
-                const genTime = (window.RWRelay.genTimestamp?.(gen)) || 0;
-                const localStamp = (() => { try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}').savedAt || 0; } catch (e) { return 0; } })();
-                if (genTime > localStamp + 5000 && gen !== dismissedGenRef.current) {
-                    setNewerAvailable(gen);
-                } else if (genTime <= localStamp + 5000) {
-                    setNewerAvailable(null);
-                }
-            } catch (e) { /* freshness is best-effort */ }
-        };
-        const t = setTimeout(check, 3000); // after the initial load settles
-        const onVis = () => { if (document.visibilityState === 'visible') check(); };
-        document.addEventListener('visibilitychange', onVis);
-        return () => { clearTimeout(t); document.removeEventListener('visibilitychange', onVis); };
-    }, []);
 
     return (
         <div className="min-h-screen" style={{ background: 'var(--bg-page, #ffffff)', color: 'var(--text-primary, #1e293b)' }}>
