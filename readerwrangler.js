@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "7.7.0-alpha.2";  // Build version for this file
+        const ORGANIZER_VERSION = "7.7.0-alpha.3";  // Build version for this file
 
         // v6.19.0 - Dev environments talk to the DEV relay worker (isolated KV namespace), so
         // local/dev testing can never touch production relay data. Mirrors the nav-hub's rule,
@@ -1068,6 +1068,7 @@
             });
             const dataOpInProgressRef = useRef(false); // v6.3.0 - Guards against overlapping import/restore/delete operations
             const orgLoadedRef = useRef(false); // v7.7.0-alpha.1 (F1) - Gate for ALL organization persistence: opens only when the load path completed
+            const deviceStateBootBaselineRef = useRef(false); // v7.7.0-alpha.3 - Set at load end, consumed by the device-state effect's first unguarded run: the boot render is a baseline, not a change (each boot was pushing a full identical gen on first blur)
             const blobSaveFailWarnedRef = useRef(false); // v7.7.0-alpha.1 - One loud toast per session on organization save failure
 
             // v6.9.0 - Single gateway for all relay credential and status changes.
@@ -3729,6 +3730,7 @@
                         // v7.7.0-alpha.1 (F1) - THE success gate: organization persistence stays closed
                         // until the load path completed. A failed boot writes nothing, ever.
                         orgLoadedRef.current = true;
+                        deviceStateBootBaselineRef.current = true; // v7.7.0-alpha.3 - the load's own setState wave is not a change
 
                         // Loading complete - set syncStatus to indicate we're done loading
                         // Actual status display now comes from libraryStatus/collectionsStatus
@@ -3798,6 +3800,14 @@
                 // restore's own setStates — its push already carried them. Changes after the window
                 // mark pending normally.
                 if (Date.now() < deviceStateSettleUntilRef.current) return;
+                // v7.7.0-alpha.3 - Boot baseline: the load's final setState batch fires this effect
+                // once with everything "changed" — but nothing happened. Consuming the flag here
+                // (instead of marking pending) stops the boot-echo leak: every tab open was arming
+                // a full identical push, flushed on first blur (~20 KV writes / ~17MB per tab open —
+                // seen live 2026-09-02, gens 10:36:54 and 17:27:33; likely a big slice of the
+                // "writes still a bit high" residue). It also mis-armed the close-nag on boots
+                // where nothing changed.
+                if (deviceStateBootBaselineRef.current) { deviceStateBootBaselineRef.current = false; return; }
 
                 // A real change occurred → mark pending + show unsynced.
                 deviceStatePendingRef.current = true;
