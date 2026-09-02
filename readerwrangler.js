@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "7.6.2-alpha.1";  // Build version for this file
+        const ORGANIZER_VERSION = "7.6.2-alpha.2";  // Build version for this file
 
         // v6.19.0 - Dev environments talk to the DEV relay worker (isolated KV namespace), so
         // local/dev testing can never touch production relay data. Mirrors the nav-hub's rule,
@@ -870,6 +870,8 @@
             };
             const [explorerDragData, setExplorerDragData] = useState(null); // { sourceFolder, bookIds } for drag validity checks
             const draggedFoldersAllPinnedRef = useRef(false); // v7.6.0-alpha.15 - right-pane reorder gate: pin-zone drags are allowed in sorted modes (dragover can't read the payload, so dragstart records this)
+            const toastHistoryRef = useRef([]); // v7.6.2-alpha.2 - session toast receipts (ring buffer of 50)
+            const [toastHistoryOpen, setToastHistoryOpen] = useState(false); // v7.6.2-alpha.2
             // v5.5.4-alpha.23 - Drag virtualization refs (hide off-screen rows during drag)
             const dragVirtScrollRef = useRef(null);    // Scroll container element
             const dragVirtContainerRef = useRef(null);  // tbody (list) or grid div
@@ -1881,6 +1883,10 @@
             // x/y: screen coordinates (optional — defaults to center-screen if missing/non-numeric)
             // level: 'info' (default) or 'error' (red text via --text-danger)
             const showToast = (message, x, y, { level = 'info' } = {}) => {
+                // v7.6.2-alpha.2 - Toast history (Ron-ratified): toasts carry real information and
+                // evaporate. Session-local ring buffer, newest last, capped at 50; the 🕐 by the
+                // status bar opens the receipts (VS Code notification-bell convention).
+                toastHistoryRef.current = [...toastHistoryRef.current.slice(-49), { message, level, time: Date.now() }];
                 const posX = typeof x === 'number' ? x : window.innerWidth / 2;
                 const posY = typeof y === 'number' ? y : window.innerHeight * 0.4;
                 setClipboardMessage(message);
@@ -5291,6 +5297,11 @@
 
             // Schema v2.0: Export unified file with organization
             const exportBackup = async () => {
+                // v7.6.2-alpha.2 - Backup receipts (Ron-ratified): Save Backup was silent — real seconds
+                // of serialization with nothing on screen, then only Chrome's subtle downloads bubble.
+                // Progress while it works; a rich toast (count, size, filename) as the receipt — NOT a
+                // modal (restore's modal is earned, the world changed; backup is fire-and-continue).
+                const progress = showProgressDialog('Saving Backup', 'Preparing your backup…');
                 try {
                     const allBooks = await loadBooksFromIndexedDB();
 
@@ -5418,7 +5429,12 @@
                     URL.revokeObjectURL(url);
                     console.log('✅ Backup exported (v2.0 format with organization)');
                     new Image().src = 'https://readerwrangler.goatcounter.com/count?p=/event/file-exported';
+                    progress.close();
+                    // v7.6.2-alpha.2 - The receipt: filename + count + size = the confidence that was
+                    // missing (copy note: we can only confirm hand-off to the browser; "saved" is right)
+                    showToast(`Backup saved — ${allBooks.length.toLocaleString()} books, ${(blob.size / 1048576).toFixed(1)} MB → ${a.download}`);
                 } catch (error) {
+                    progress.close();
                     console.error('Failed to export library:', error);
                     showInfoDialog('Export Error', 'Failed to export library.');
                 }
@@ -19175,6 +19191,33 @@
                     <div className="fixed bottom-0 left-0 right-0 bg-gray-100 border-t border-gray-200 py-1 px-4 text-xs text-gray-500 z-40 flex items-center justify-between">
                         {/* Left: Clipboard and Selection status (v4.16.0.n - clipboard first for toast target) */}
                         <div className="text-left flex items-center gap-3">
+                            {/* v7.6.2-alpha.2 - Toast history: the session's receipts (last 50), for every
+                                message that evaporated before it was read */}
+                            <span className="relative">
+                                <button
+                                    onClick={() => setToastHistoryOpen(o => !o)}
+                                    className="text-gray-400 hover:text-gray-600 px-1"
+                                    title="Recent messages (this session)"
+                                    aria-label="Recent messages"
+                                    style={{ fontSize: '13px', lineHeight: '1' }}>🕐</button>
+                                {toastHistoryOpen && (
+                                    <>
+                                        <div className="fixed inset-0 z-[69]" onClick={() => setToastHistoryOpen(false)} />
+                                        <div className="absolute bottom-6 left-0 bg-white border border-gray-300 shadow-lg rounded z-[70] w-[420px] max-h-[320px] overflow-y-auto py-1">
+                                            {toastHistoryRef.current.length === 0 ? (
+                                                <div className="px-3 py-2 text-gray-400">No messages yet this session</div>
+                                            ) : (
+                                                [...toastHistoryRef.current].reverse().map((t, i) => (
+                                                    <div key={i} className={`px-3 py-1.5 border-b border-gray-100 last:border-0 ${t.level === 'error' ? 'text-red-600' : 'text-gray-700'}`}>
+                                                        <span className="text-gray-400 mr-2">{new Date(t.time).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', second: '2-digit' })}</span>
+                                                        {t.message}
+                                                    </div>
+                                                ))
+                                            )}
+                                        </div>
+                                    </>
+                                )}
+                            </span>
                             {/* Clipboard (always leftmost for toast animation target) */}
                             {/* v4.16.0.o - Only show when footerClipboardVisible (after toast lands) */}
                             {clipboardMessage && footerClipboardVisible && (
