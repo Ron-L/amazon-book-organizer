@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "7.6.2-alpha.3";  // Build version for this file
+        const ORGANIZER_VERSION = "7.6.2-alpha.4";  // Build version for this file
 
         // v6.19.0 - Dev environments talk to the DEV relay worker (isolated KV namespace), so
         // local/dev testing can never touch production relay data. Mirrors the nav-hub's rule,
@@ -5306,6 +5306,26 @@
                 // of serialization with nothing on screen, then only Chrome's subtle downloads bubble.
                 // Progress while it works; a rich toast (count, size, filename) as the receipt — NOT a
                 // modal (restore's modal is earned, the world changed; backup is fire-and-continue).
+                // v7.6.2-alpha.4 - Picker FIRST via showSaveFilePicker where available (Ron: the toast
+                // fired before Chrome's ask-where picker — and a cancelled picker would make "saved" a
+                // lie). The picker needs the click's user-activation (serialization would burn it), we
+                // learn the REAL filename, completion means the write actually happened, and cancel gets
+                // an honest toast. Browsers without the API fall back to the anchor download.
+                const now = new Date();
+                const dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}.${String(now.getMinutes()).padStart(2, '0')}`;
+                const suggestedName = `readerwrangler-backup-${dateStr}.json`;
+                let fileHandle = null;
+                if (window.showSaveFilePicker) {
+                    try {
+                        fileHandle = await window.showSaveFilePicker({
+                            suggestedName,
+                            types: [{ description: 'ReaderWrangler backup', accept: { 'application/json': ['.json'] } }]
+                        });
+                    } catch (e) {
+                        if (e && e.name === 'AbortError') { showToast('Backup cancelled — nothing saved'); return; }
+                        fileHandle = null; // picker unavailable/refused → anchor fallback below
+                    }
+                }
                 const progress = showProgressDialog('Saving Backup', 'Preparing your backup…');
                 try {
                     const allBooks = await loadBooksFromIndexedDB();
@@ -5423,21 +5443,29 @@
                     }
 
                     const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
-                    const url = URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    // v4.15.7: Backup filename with local date and time (fixes UTC date bug after 6pm)
-                    const now = new Date();
-                    const dateStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}.${String(now.getMinutes()).padStart(2,'0')}`;
-                    a.download = `readerwrangler-backup-${dateStr}.json`;
-                    a.click();
-                    URL.revokeObjectURL(url);
+                    let savedName;
+                    if (fileHandle) {
+                        // v7.6.2-alpha.4 - Real write to the user's chosen destination: completion here
+                        // means the file genuinely exists where they put it.
+                        const writable = await fileHandle.createWritable();
+                        await writable.write(blob);
+                        await writable.close();
+                        savedName = fileHandle.name;
+                    } else {
+                        // Fallback (no File System Access API): classic anchor download
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = suggestedName;
+                        a.click();
+                        URL.revokeObjectURL(url);
+                        savedName = suggestedName;
+                    }
                     console.log('✅ Backup exported (v2.0 format with organization)');
                     new Image().src = 'https://readerwrangler.goatcounter.com/count?p=/event/file-exported';
                     progress.close();
-                    // v7.6.2-alpha.2 - The receipt: filename + count + size = the confidence that was
-                    // missing (copy note: we can only confirm hand-off to the browser; "saved" is right)
-                    showToast(`Backup saved — ${allBooks.length.toLocaleString()} books, ${(blob.size / 1048576).toFixed(1)} MB → ${a.download}`);
+                    // v7.6.2-alpha.2 - The receipt: filename + count + size = the confidence that was missing
+                    showToast(`Backup saved — ${allBooks.length.toLocaleString()} books, ${(blob.size / 1048576).toFixed(1)} MB → ${savedName}`);
                 } catch (error) {
                     progress.close();
                     console.error('Failed to export library:', error);
