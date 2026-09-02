@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [7.6.2] - 2026-09-02
+
+### Receipts and honesty
+- **Toast history** 🕐 — every toast now lands in a session log (the little clock by the status bar): the messages that used to evaporate before you read them are one click away, with timestamps.
+- **Save Backup finally reports back** — a save dialog up front (pick where your safety net goes), progress while it packs, and a receipt when it's really done: *"Backup saved — 3,136 books, 46.7 MB → readerwrangler-backup-….json"*. Cancel says so honestly. No more squinting at the browser's downloads bubble.
+- **Names-only browsing on mobile** — the Dashboard's Folders and Book Lists headings gained the ⊟/⊞ from the desktop sidebar: one tap collapses the whole section to a clean list of names (tap a name to open just that one). Scanning for a folder stops meaning paging through screens of covers.
+- **Restores no longer double-push** — the cloud upload after a restore used to fire twice (the real one, then a redundant echo a minute later), wasting a full upload and making phones report "newer" against their own sync. One push now.
+- **The freshness banner names its copies** — *"Your library is from 3:04 PM (…e0af) — a newer one from 3:05 PM (…9af6)"* — with seconds shown when both stamps share a minute. Help & About shows your copy's id too.
+
 ## [7.6.1] - 2026-09-01
 
 ### Fixed: the "newer library available" banner nagging a fully-synced phone
