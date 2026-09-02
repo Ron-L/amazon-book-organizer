@@ -1,6 +1,6 @@
 // mobile.js — ReaderWrangler Mobile Viewer
 // MOBILE_VERSION tracks mobile-specific iterations
-const MOBILE_VERSION = '1.7.2'; // suffix mirrors ORGANIZER_VERSION's -alpha.N in any alpha commit touching this file (Ron, 2026-08-30: invisible changes + no build marker = guaranteed mystery)
+const MOBILE_VERSION = '1.8.0-alpha.1'; // suffix mirrors ORGANIZER_VERSION's -alpha.N in any alpha commit touching this file (Ron, 2026-08-30: invisible changes + no build marker = guaranteed mystery)
 console.log(`✅ Mobile viewer ${MOBILE_VERSION} | APP_VERSION: ${APP_VERSION}`);
 
 // v1.7.0 - Which server is this copy talking to? Derived from the page's own address, so an
@@ -101,7 +101,9 @@ function restoreOrganization(org, bookIds, sourceStamp, sourceGen) {
         bookIds: (bl.bookIds || []).filter(id => validIds.has(id))
     }));
 
-    localStorage.setItem(FOLDERS_KEY, JSON.stringify(folders));
+    // v1.8.0-alpha.1 (F1 consolidation) - The blob below is the SINGLE folder store; the
+    // legacy FOLDERS_KEY write is gone (readCachedFolders() falls back to it read-only
+    // for caches written before this release).
     localStorage.setItem(STORAGE_KEY, JSON.stringify({
         organization: {
             folders: folders,
@@ -126,6 +128,16 @@ function restoreOrganization(org, bookIds, sourceStamp, sourceGen) {
     }));
 
     return folders;
+}
+
+// v1.8.0-alpha.1 (F1 consolidation) - Single read path for the cached folder tree:
+// blob first, legacy FOLDERS_KEY only as a migration fallback for pre-1.8 caches.
+function readCachedFolders() {
+    try {
+        const org = (JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}').organization) || {};
+        if (Array.isArray(org.folders) && org.folders.length > 0) return org.folders;
+    } catch (e) {}
+    try { return JSON.parse(localStorage.getItem(FOLDERS_KEY) || '[]'); } catch (e) { return []; }
 }
 
 // --- SVG Icons (inline, no external deps) ---
@@ -2619,7 +2631,7 @@ function MobileApp() {
         const loadedBooks = await loadBooksFromIndexedDB();
         setBooks(loadedBooks);
 
-        const savedFolders = JSON.parse(localStorage.getItem(FOLDERS_KEY) || '[]');
+        const savedFolders = readCachedFolders(); // v1.8.0-alpha.1 (F1) - blob-first
         setFolders(savedFolders);
 
         const orgState = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
@@ -2655,7 +2667,7 @@ function MobileApp() {
                 setNavStack(prev => {
                     if (prev.length <= 1) return prev;
                     const bookIds = new Set(loadedBooks.map(b => b.id));
-                    const folderIds = new Set(JSON.parse(localStorage.getItem(FOLDERS_KEY) || '[]').map(f => f.id));
+                    const folderIds = new Set(readCachedFolders().map(f => f.id)); // v1.8.0-alpha.1 (F1) - blob-first
                     for (let i = 1; i < prev.length; i++) {
                         const entry = prev[i];
                         if (entry.view === 'search') {

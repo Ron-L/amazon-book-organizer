@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "7.6.2";  // Build version for this file
+        const ORGANIZER_VERSION = "7.7.0-alpha.1";  // Build version for this file
 
         // v6.19.0 - Dev environments talk to the DEV relay worker (isolated KV namespace), so
         // local/dev testing can never touch production relay data. Mirrors the nav-hub's rule,
@@ -1067,6 +1067,8 @@
                 } catch { return null; }
             });
             const dataOpInProgressRef = useRef(false); // v6.3.0 - Guards against overlapping import/restore/delete operations
+            const orgLoadedRef = useRef(false); // v7.7.0-alpha.1 (F1) - Gate for ALL organization persistence: opens only when the load path completed
+            const blobSaveFailWarnedRef = useRef(false); // v7.7.0-alpha.1 - One loud toast per session on organization save failure
 
             // v6.9.0 - Single gateway for all relay credential and status changes.
             // Every key change and relay network result goes through here.
@@ -3620,19 +3622,38 @@
                         // v5.0.0-alpha.169.10 - Mark settings loaded (even if no saved data)
                         explorerSettingsLoadedRef.current = true;
 
-                        // v5.0.0 - Load folders
-                        const savedFolders = localStorage.getItem(FOLDERS_KEY);
-                        let loadedFolders = savedFolders ? JSON.parse(savedFolders) : [];
+                        // v7.7.0-alpha.1 (F1 consolidation) - THE BLOB IS THE SINGLE SOURCE for folders and
+                        // the rest of the organization, read FIRST and UNCONDITIONALLY. The old flow read
+                        // FOLDERS_KEY, then let the blob override only when books loaded — so a cold boot
+                        // with an empty book database silently fell back to the second store (audit F1;
+                        // the same double-store class as the 6.12.0 Book List loss, and the fog that made
+                        // the folder-order scrambler so hard to diagnose). FOLDERS_KEY is now a READ-ONCE
+                        // MIGRATION source (pre-blob installs); its writers are gone; the key itself stays
+                        // in place one release as an inert rollback net.
+                        let orgState = null;
+                        try { orgState = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null'); }
+                        catch (e) { console.warn('⚠️ Organization store unreadable (continuing with fallbacks):', e); }
+                        const org = (orgState && orgState.organization) || null;
 
-                        // v6.12.0-alpha.88 - Book Lists now persist INSIDE the guarded organization blob (with
-                        // folders/searches). This standalone-key read is the ONE-TIME MIGRATION source for installs
-                        // that predate the move: it seeds bookLists, then the blob restore below overrides it once
-                        // the blob actually carries them. (Kept as a read only — the unguarded writer was removed,
-                        // it was stamping [] on mount and permanently erasing all lists on a cold-boot race.)
-                        const savedBookLists = localStorage.getItem(BOOKLISTS_KEY);
-                        const loadedBookLists = savedBookLists ? JSON.parse(savedBookLists) : [];
+                        let loadedFolders = (org && Array.isArray(org.folders) && org.folders.length > 0) ? org.folders : [];
+                        if (loadedFolders.length === 0) {
+                            const savedFolders = localStorage.getItem(FOLDERS_KEY);
+                            loadedFolders = savedFolders ? JSON.parse(savedFolders) : [];
+                            if (loadedFolders.length > 0) console.log('📦 Folders migrated from the legacy standalone key (pre-blob install)');
+                        }
 
-                        // v6.0.0-alpha.53 - Ensure Inbox exists for fresh installs
+                        // v6.12.0-alpha.88 - BOOKLISTS_KEY is the one-time migration source for pre-blob
+                        // installs; the blob wins whenever it carries lists.
+                        let loadedBookLists = [];
+                        if (org && Array.isArray(org.bookLists)) {
+                            loadedBookLists = org.bookLists.map(bl => ({ ...bl, bookIds: bl.bookIds || [] }));
+                        } else {
+                            const savedBookLists = localStorage.getItem(BOOKLISTS_KEY);
+                            loadedBookLists = savedBookLists ? JSON.parse(savedBookLists) : [];
+                        }
+
+                        // v6.0.0-alpha.53 - Ensure Inbox exists for fresh installs (memory only — the
+                        // guarded blob save persists it once the load completes and the gate opens)
                         if (loadedFolders.length === 0) {
                             loadedFolders = [{
                                 id: '__inbox__',
@@ -3643,28 +3664,48 @@
                                 collapsed: false,
                                 isInbox: true
                             }];
-                            localStorage.setItem(FOLDERS_KEY, JSON.stringify(loadedFolders));
                             console.log('📥 Created default Inbox folder for fresh install');
                         }
 
+                        // The rest of the organization applies UNCONDITIONALLY too — org is independent
+                        // of whether the book database came back (the old books-gate was the F1 fog)
+                        if (org) {
+                            setBlankImageBooks(new Set(org.blankImageBooks || []));
+                            setHiddenInstances(new Set(org.hiddenInstances || [])); // v4.16.0.z
+                            setTagRegistry(org.tagRegistry || {}); // v4.27.0
+                            // v6.12.0 - Saved searches (legacy saved-views/pinnedTagFolders intentionally dropped)
+                            let loadedViews = org.savedSearches || [];
+                            if (loadedViews.length > 0 && loadedFolders.length > 0) {
+                                const rootCount = loadedFolders.filter(f => f.parentId === null && f.id !== '__inbox__').length;
+                                const maxFolderDisplayPos = rootCount > 0 ? (rootCount - 1) * 2 : -1;
+                                const maxViewPos = Math.max(...loadedViews.map(v => v.position));
+                                if (maxViewPos <= maxFolderDisplayPos) {
+                                    const offset = maxFolderDisplayPos + 1;
+                                    loadedViews = loadedViews.map(v => ({ ...v, position: v.position + offset }));
+                                }
+                            }
+                            setSavedSearches(loadedViews);
+                            setDataSource(org.dataSource || 'enriched');
+                        } else {
+                            setDataSource('enriched');
+                        }
+                        setLastSyncTime((orgState && orgState.lastSyncTime) || Date.now());
+
                         // Load books from IndexedDB
                         let loadedBooks = await loadBooksFromIndexedDB();
-
-                        // Merge collections data into loaded books
                         if (loadedBooks.length > 0) {
                             loadedBooks = await mergeCollectionsIntoBooks(loadedBooks);
 
-                            // v6.3.0 - Data integrity check (replaces v5.1.0-alpha.8 inline orphan cleanup)
-                            // Checks: ghost refs, duplicate refs, homeless books, corrupted objects
+                            // v6.3.0 - Data integrity check (ghost refs, duplicates, homeless, corrupted).
+                            // v7.7.0-alpha.1 - No direct localStorage write: the guarded blob save persists
+                            // the corrected folders once setFolders lands.
                             if (loadedFolders.length > 0) {
                                 const integrityResult = runIntegrityCheck(loadedBooks, loadedFolders);
                                 if (integrityResult) {
                                     loadedFolders = integrityResult.correctedFolders;
                                     if (integrityResult.autoFixed.length > 0) {
-                                        localStorage.setItem(FOLDERS_KEY, JSON.stringify(loadedFolders));
                                         const totalFixed = integrityResult.autoFixed.reduce((s, f) => s + (f.books.length || 1), 0);
                                         console.log(`🔧 Integrity auto-fixed on load:`, integrityResult.autoFixed.map(f => f.description));
-                                        // Show toast after render (setTimeout lets setFolders/setBooks settle first)
                                         setTimeout(() => showToast(`Library repair: ${totalFixed} issue${totalFixed !== 1 ? 's' : ''} fixed — see Data Status`), 500);
                                     }
                                     if (integrityResult.needsReview.length > 0) {
@@ -3673,71 +3714,21 @@
                                 }
                             }
 
-                            setFolders(loadedFolders);
-                            setBookLists(loadedBookLists); // v6.12.0
                             setBooks(loadedBooks);
-                            // Update IndexedDB with merged data
                             await saveBooksToIndexedDB(loadedBooks);
 
-                            // v4.13.0: Initialize cover cache
-                            // Build URL map from cache for immediate use
+                            // v4.13.0: cover cache
                             const urlMap = await buildCoverUrlMap(loadedBooks);
                             setCoverUrlMap(urlMap);
-                            // Populate cache in background for uncached images
-                            populateCoverCache(loadedBooks); // Don't await - runs in background
+                            populateCoverCache(loadedBooks); // background
                         }
 
-                        let effectiveLastSync = null;
+                        setFolders(loadedFolders);
+                        setBookLists(loadedBookLists); // v6.12.0
 
-                        if (loadedBooks.length > 0) {
-
-                            // Load organization from localStorage
-                            const saved = localStorage.getItem(STORAGE_KEY);
-                            if (saved) {
-                                const state = JSON.parse(saved);
-                                if (state.organization) {
-                                    setBlankImageBooks(new Set(state.organization.blankImageBooks || []));
-                                    setHiddenInstances(new Set(state.organization.hiddenInstances || [])); // v4.16.0.z
-                                    setTagRegistry(state.organization.tagRegistry || {}); // v4.27.0
-                                    // v6.12.0 - Load saved searches. Legacy saved-views and pinnedTagFolders
-                                    // are intentionally dropped (not migrated) per the Book Lists/Searches redesign.
-                                    const loadedFolders = state.organization.folders || [];
-                                    let loadedViews = state.organization.savedSearches || [];
-                                    // Position migration for interleaved display
-                                    if (loadedViews.length > 0 && loadedFolders.length > 0) {
-                                        const rootCount = loadedFolders.filter(f => f.parentId === null && f.id !== '__inbox__').length;
-                                        const maxFolderDisplayPos = rootCount > 0 ? (rootCount - 1) * 2 : -1;
-                                        const maxViewPos = Math.max(...loadedViews.map(v => v.position));
-                                        if (maxViewPos <= maxFolderDisplayPos) {
-                                            const offset = maxFolderDisplayPos + 1;
-                                            loadedViews.forEach(v => { v.position += offset; });
-                                        }
-                                    }
-                                    setSavedSearches(loadedViews);
-                                    setFolders(loadedFolders); // v5.0.0
-                                    // v6.12.0-alpha.88 - Book Lists now live in the blob (like folders/searches).
-                                    // Override the early BOOKLISTS_KEY migration read ONLY when the blob actually
-                                    // carries them; absent = an install not yet migrated, so the early read stands.
-                                    if (Array.isArray(state.organization.bookLists)) {
-                                        setBookLists(state.organization.bookLists.map(bl => ({ ...bl, bookIds: bl.bookIds || [] })));
-                                    }
-                                    setDataSource(state.organization.dataSource || 'enriched');
-                                    effectiveLastSync = state.lastSyncTime || Date.now();
-                                    setLastSyncTime(effectiveLastSync);
-                                } else {
-                                    // No organization saved
-                                    setDataSource('enriched');
-                                    effectiveLastSync = Date.now();
-                                    setLastSyncTime(effectiveLastSync);
-                                }
-                            } else {
-                                // No saved state
-                                setDataSource('enriched');
-                                effectiveLastSync = Date.now();
-                                setLastSyncTime(effectiveLastSync);
-                            }
-                        }
-
+                        // v7.7.0-alpha.1 (F1) - THE success gate: organization persistence stays closed
+                        // until the load path completed. A failed boot writes nothing, ever.
+                        orgLoadedRef.current = true;
 
                         // Loading complete - set syncStatus to indicate we're done loading
                         // Actual status display now comes from libraryStatus/collectionsStatus
@@ -3763,31 +3754,37 @@
                 };
             }, []);
 
-            // Auto-save organization
-            // v4.16.0.ab - Guard: Skip save while loading to prevent race condition
+            // Auto-save organization — THE single folder/organization store (F1 consolidation)
+            // v7.7.0-alpha.1 - Explicit load-complete gate replaces the old books.length proxy: a
+            // failed or half-finished boot writes NOTHING (no more mount-stamp erasure class), and an
+            // empty-but-loaded library persists fine (the proxy blocked that, which is why the load
+            // path used to need FOLDERS_KEY as a fallback). Save failures are LOUD now — a silently
+            // stale blob time-travels the library on next boot.
             useEffect(() => {
-                if (syncStatus === 'loading') return;
-                if (books.length > 0) {
-                    try {
-                        const state = {
-                            organization: {
-                                folders,  // v5.0.0 - Book Explorer folders
-                                dataSource,
-                                blankImageBooks: Array.from(blankImageBooks),
-                                hiddenInstances: Array.from(hiddenInstances), // v4.16.0.z
-                                tagRegistry,  // v4.27.0 - Tag registry
-                                savedSearches,  // v6.10.0-alpha.16 - Saved filter views
-                                bookLists: bookLists.map(bl => ({ ...bl, bookIds: bl.bookIds || [] }))  // v6.12.0-alpha.88 - Book Lists now share the guarded blob (single resilient source; retired the fragile standalone key)
-                            },
-                            lastSyncTime: lastSyncTime || Date.now(),
-                            savedAt: Date.now()
-                        };
-                        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-                    } catch (e) {
-                        console.warn('Could not auto-save organization:', e);
+                if (!orgLoadedRef.current) return;
+                try {
+                    const state = {
+                        organization: {
+                            folders,  // v5.0.0 - Book Explorer folders
+                            dataSource,
+                            blankImageBooks: Array.from(blankImageBooks),
+                            hiddenInstances: Array.from(hiddenInstances), // v4.16.0.z
+                            tagRegistry,  // v4.27.0 - Tag registry
+                            savedSearches,  // v6.10.0-alpha.16 - Saved filter views
+                            bookLists: bookLists.map(bl => ({ ...bl, bookIds: bl.bookIds || [] }))  // v6.12.0-alpha.88 - Book Lists share the guarded blob
+                        },
+                        lastSyncTime: lastSyncTime || Date.now(),
+                        savedAt: Date.now()
+                    };
+                    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+                } catch (e) {
+                    console.error('❌ Could not save organization:', e);
+                    if (!blobSaveFailWarnedRef.current) {
+                        blobSaveFailWarnedRef.current = true;
+                        showToast('⚠️ Your library organization could not be saved — browser storage may be full');
                     }
                 }
-            }, [syncStatus, folders, blankImageBooks, dataSource, lastSyncTime, hiddenInstances, tagRegistry, savedSearches, bookLists]);
+            }, [folders, blankImageBooks, dataSource, lastSyncTime, hiddenInstances, tagRegistry, savedSearches, bookLists]);
 
             // v6.0.0 Phase 2 - Debounced device-state push to relay for cross-device sync.
             // v6.12.0-alpha.58 - Debounce raised 15s → 60s AND flush-on-leave (blur / tab hidden / pagehide).
@@ -3855,8 +3852,7 @@
                 const result = runIntegrityCheck(books, folders);
                 if (!result) return;
                 if (result.autoFixed.length > 0) {
-                    setFolders(result.correctedFolders);
-                    localStorage.setItem(FOLDERS_KEY, JSON.stringify(result.correctedFolders));
+                    setFolders(result.correctedFolders); // guarded blob save persists this (F1)
                     const totalFixed = result.autoFixed.reduce((s, f) => s + (f.books.length || 1), 0);
                     showToast(`Library repair: ${totalFixed} issue${totalFixed !== 1 ? 's' : ''} fixed — see Data Status`);
                     console.log(`🔧 Integrity auto-fixed:`, result.autoFixed.map(f => f.description));
@@ -4010,6 +4006,8 @@
 
             // Save libraryStatus and collectionsStatus to localStorage (v3.7.0.n)
             useEffect(() => {
+                // v7.7.0-alpha.1 (F1) - Load gate: don't stamp defaults over the saved statuses on mount
+                if (!orgLoadedRef.current) return;
                 const statusData = { libraryStatus, collectionsStatus };
                 localStorage.setItem(STATUS_KEY, JSON.stringify(statusData));
             }, [libraryStatus, collectionsStatus]);
@@ -4050,18 +4048,11 @@
                 localStorage.setItem(EXPLORER_KEY, JSON.stringify(explorerData));
             }, [selectedFolderId, explorerView, explorerSort, explorerCoverCols, leftPaneWidth, folderSortSettings, folderListSort, visibleColumns, columnWidths, columnOrder, explorerGroupOn, viewsSectionCollapsed, bookListsSectionCollapsed, foldersSectionCollapsed]);
 
-            // v5.0.0 - Save folders to localStorage
-            useEffect(() => {
-                localStorage.setItem(FOLDERS_KEY, JSON.stringify(folders));
-            }, [folders]);
-
-            // v6.12.0-alpha.88 - Book Lists are persisted via the GUARDED organization blob above (alongside
-            // folders/searches), NOT a standalone key. The old unguarded BOOKLISTS_KEY save-effect wrote [] on
-            // mount — before the async load populated state — and on a cold boot where IndexedDB returned no
-            // books the restore was skipped, so that [] stuck: every Book List erased with no fallback (folders
-            // survived only because they were ALSO in the blob). The blob's syncStatus/books guard prevents any
-            // pre-load write, and the blob is a resilient second source. BOOKLISTS_KEY is now read-once on load
-            // as a one-time migration source (see the load effect); its writer is intentionally gone.
+            // v7.7.0-alpha.1 (F1 consolidation) - FOLDERS_KEY and BOOKLISTS_KEY writers are GONE. Both
+            // now persist ONLY via the gated organization blob above; the standalone keys are read-once
+            // migration sources on load (pre-blob installs) and will be removed entirely next release.
+            // FOLDERS_KEY's writer was the last unguarded mount-stamper of the Book-List-killer class —
+            // and the double store was the fog behind the folder-order scrambler diagnosis.
 
             // v5.0.0-alpha.175.2 - Close menus on outside click, close dialogs on ESC
             // v5.0.0-alpha.175.4 - Extended to close filter dropdowns
@@ -6029,8 +6020,7 @@
                     if (Array.isArray(orgToRestore.bookLists)) {
                         // v6.12.0 - Deny-list spread: keep every field the source carries (mirrors serialization)
                         const restoredBookLists = orgToRestore.bookLists.map(bl => ({ ...bl, bookIds: bl.bookIds || [] }));
-                        setBookLists(restoredBookLists);
-                        localStorage.setItem(BOOKLISTS_KEY, JSON.stringify(restoredBookLists));
+                        setBookLists(restoredBookLists); // guarded blob save persists this (F1)
                         pushOrgOverride.bookLists = restoredBookLists; // v7.6.0-alpha.19
                     }
 
@@ -6057,8 +6047,7 @@
                             console.log(`🔧 Integrity auto-fixed during restore:`, integrityResult.autoFixed.map(f => f.description));
                         }
 
-                        setFolders(finalFolders);
-                        localStorage.setItem(FOLDERS_KEY, JSON.stringify(finalFolders));
+                        setFolders(finalFolders); // guarded blob save persists this (F1)
                         pushOrgOverride.folders = finalFolders; // v7.6.0-alpha.19 - the integrity-checked applied set
                         console.log(`✅ Restored ${restoredFolders.length} folders from ${orgSource}`);
                     } else {
