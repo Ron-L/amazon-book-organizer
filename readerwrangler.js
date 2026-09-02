@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "7.7.0-alpha.1";  // Build version for this file
+        const ORGANIZER_VERSION = "7.7.0-alpha.2";  // Build version for this file
 
         // v6.19.0 - Dev environments talk to the DEV relay worker (isolated KV namespace), so
         // local/dev testing can never touch production relay data. Mirrors the nav-hub's rule,
@@ -6116,6 +6116,14 @@
                             // arms the debounced push ~60s later with IDENTICAL content — a redundant ~17MB
                             // generation, and the phone banners "6:01 newer than 6:01" against its own sync.
                             deviceStateSettleUntilRef.current = Date.now() + 5000;
+                            // v7.7.0-alpha.2 - The settle window only covers renders AFTER this line — but
+                            // the multi-minute chunk upload above lets the restore's setState wave render
+                            // DURING the await, marking pending before the window exists. This push just
+                            // carried everything there is to carry: clear the flag and mark synced, exactly
+                            // as pushNow's success path does (else the next blur flushes an identical ~17MB
+                            // echo generation — seen live 2026-09-02, gen minted 10:59:59).
+                            deviceStatePendingRef.current = false;
+                            await relayOp('pushOk');
                         } catch (err) {
                             console.warn('⚠️ Backup restored locally but relay sync failed:', err.message);
                         }
