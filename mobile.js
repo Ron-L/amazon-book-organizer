@@ -1,6 +1,6 @@
 // mobile.js — ReaderWrangler Mobile Viewer
 // MOBILE_VERSION tracks mobile-specific iterations
-const MOBILE_VERSION = '1.7.2-alpha.1'; // suffix mirrors ORGANIZER_VERSION's -alpha.N in any alpha commit touching this file (Ron, 2026-08-30: invisible changes + no build marker = guaranteed mystery)
+const MOBILE_VERSION = '1.7.2-alpha.3'; // suffix mirrors ORGANIZER_VERSION's -alpha.N in any alpha commit touching this file (Ron, 2026-08-30: invisible changes + no build marker = guaranteed mystery)
 console.log(`✅ Mobile viewer ${MOBILE_VERSION} | APP_VERSION: ${APP_VERSION}`);
 
 // v1.7.0 - Which server is this copy talking to? Derived from the page's own address, so an
@@ -1038,7 +1038,7 @@ function AppMenu({ themePreference, viewMode, showDealsOnly, showHidden, onApply
                     <p><a href="changelog.html" style={{ color: 'var(--text-link, #2563eb)', textDecoration: 'none' }}>App v{APP_VERSION}</a></p>
                     <p>Mobile v{MOBILE_VERSION}</p>
                     <p>Server: {SERVER_ENV.label}</p>
-                    {libraryAsOf && <p>Library as of {new Date(libraryAsOf).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}</p>}
+                    {libraryAsOf && <p>Library as of {new Date(libraryAsOf).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}{(() => { try { const g = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}').deviceStateGen; return g ? ` (copy …${String(g).slice(-4)})` : ''; } catch (e) { return ''; } })()}</p>}
                 </div>
             </div>
         </div>
@@ -2529,6 +2529,7 @@ function MobileApp() {
                     const genTime = (window.RWRelay.genTimestamp?.(gen)) || 0;
                     newer = genTime > (blob.savedAt || 0) + 15 * 60 * 1000;
                 }
+                console.log(`[Freshness] cached gen ${blob.deviceStateGen || '(none)'} vs pointed ${gen} → ${newer ? 'NEWER available' : 'current'}`); // v1.7.2-alpha.3
                 if (newer && gen !== dismissedGenRef.current) {
                     setNewerAvailable(gen);
                 } else if (!newer) {
@@ -3031,14 +3032,19 @@ function MobileApp() {
                     fontSize: '13px', cursor: 'pointer', touchAction: 'manipulation'
                 }}>
                     {/* v1.7.1 - Both timestamps (Ron, from the nudge's first real-world firing):
-                        information, not accusation — judge whether the delta matters before reloading */}
+                        information, not accusation — judge whether the delta matters before reloading.
+                        v1.7.2-alpha.3 - Gen-id suffixes (Ron's call: identity IN the display, pre-launch)
+                        + seconds when both stamps share a minute (no more "6:01 newer than 6:01"). */}
                     <span style={{ color: '#1e293b' }}>
                         {(() => {
-                            const fmt = (t) => new Date(t).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
                             const newerTime = (window.RWRelay && window.RWRelay.genTimestamp) ? window.RWRelay.genTimestamp(newerAvailable) : 0;
-                            return (libraryAsOf && newerTime)
-                                ? `📡 Your library is from ${fmt(libraryAsOf)} — a newer one from ${fmt(newerTime)} is available. Tap to refresh.`
-                                : '📡 Newer library available — tap to refresh';
+                            if (!libraryAsOf || !newerTime) return '📡 Newer library available — tap to refresh';
+                            const minuteOf = (t) => Math.floor(t / 60000);
+                            const withSeconds = minuteOf(libraryAsOf) === minuteOf(newerTime);
+                            const fmt = (t) => new Date(t).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', ...(withSeconds ? { second: '2-digit' } : {}) });
+                            const sfx = (g) => g ? ` (…${String(g).slice(-4)})` : '';
+                            const cachedGen = (() => { try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}').deviceStateGen || null; } catch (e) { return null; } })();
+                            return `📡 Your library is from ${fmt(libraryAsOf)}${sfx(cachedGen)} — a newer one from ${fmt(newerTime)}${sfx(newerAvailable)} is available. Tap to refresh.`;
                         })()}
                     </span>
                     <button onClick={(e) => { e.stopPropagation(); dismissedGenRef.current = newerAvailable; setNewerAvailable(null); }}

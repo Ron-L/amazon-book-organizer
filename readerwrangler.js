@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "7.6.2-alpha.2";  // Build version for this file
+        const ORGANIZER_VERSION = "7.6.2-alpha.3";  // Build version for this file
 
         // v6.19.0 - Dev environments talk to the DEV relay worker (isolated KV namespace), so
         // local/dev testing can never touch production relay data. Mirrors the nav-hub's rule,
@@ -1054,6 +1054,7 @@
             });
             const deviceStatePushTimerRef = useRef(null); // v6.0.0 Phase 2 - debounce timer for device-state push
             const deviceStatePushingRef = useRef(false); // v6.0.0 Phase 2 - true while push is in flight
+            const deviceStateSettleUntilRef = useRef(0); // v7.6.2-alpha.3 - echo suppression: restore's own push already carried this state; ignore the post-restore setState wave
             const deviceStatePendingRef = useRef(false); // v6.12.0-alpha.58 - unsynced changes awaiting a push (flush guard)
             const [deviceStateErrorType, setDeviceStateErrorType] = useState(() => { // v6.9.0 - 'revoked'|'error'|'unverified'|null
                 try {
@@ -3796,6 +3797,10 @@
             useEffect(() => {
                 if (syncStatus === 'loading' || books.length === 0) return;
                 if (!window.RWRelay || !window.RWRelay.isConfigured()) return;
+                // v7.6.2-alpha.3 - Echo suppression: the settling wave right after a restore is the
+                // restore's own setStates — its push already carried them. Changes after the window
+                // mark pending normally.
+                if (Date.now() < deviceStateSettleUntilRef.current) return;
 
                 // A real change occurred → mark pending + show unsynced.
                 deviceStatePendingRef.current = true;
@@ -6090,6 +6095,10 @@
                             payload.organization = { ...payload.organization, ...pushOrgOverride, savedAt: Date.now() };
                             await window.RWRelay.putDeviceState(JSON.stringify(payload), (p, detail) => phase(detail));
                             console.log(`✅ Backup restored and synced to relay (${mergedBooks.length} books)`);
+                            // v7.6.2-alpha.3 - Echo suppression: without this, the post-restore setState wave
+                            // arms the debounced push ~60s later with IDENTICAL content — a redundant ~17MB
+                            // generation, and the phone banners "6:01 newer than 6:01" against its own sync.
+                            deviceStateSettleUntilRef.current = Date.now() + 5000;
                         } catch (err) {
                             console.warn('⚠️ Backup restored locally but relay sync failed:', err.message);
                         }
