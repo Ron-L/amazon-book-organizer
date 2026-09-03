@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "7.7.0-alpha.5";  // Build version for this file
+        const ORGANIZER_VERSION = "7.7.0-alpha.6";  // Build version for this file
 
         // v6.19.0 - Dev environments talk to the DEV relay worker (isolated KV namespace), so
         // local/dev testing can never touch production relay data. Mirrors the nav-hub's rule,
@@ -8570,6 +8570,14 @@
                                 <div style={{ fontSize: '64px', marginBottom: '20px' }}>📚</div>
                                 <h2 style={{ fontSize: '26px', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '10px' }}>Welcome to ReaderWrangler</h2>
                                 <p style={{ fontSize: '15px', color: 'var(--text-secondary)', marginBottom: '16px' }}>Organize your Kindle library your way.</p>
+                                {/* v7.7.0-alpha.6 - Empty book database but organization present (cleared browser
+                                    data, new machine): without this line the screen is indistinguishable from a
+                                    fresh install and reads as total data loss — proven live in the F1 empty-DB test. */}
+                                {(folders.some(f => !f.isInbox && f.id !== '__inbox__') || bookLists.length > 0 || savedSearches.length > 0) && (
+                                    <p style={{ fontSize: '14px', color: 'var(--text-primary)', background: 'var(--bg-hover)', borderRadius: '8px', padding: '10px 14px', marginBottom: '16px' }}>
+                                        ✅ Your folders and lists are intact — restore your books from a backup or run a fetch to fill them again.
+                                    </p>
+                                )}
                                 <div style={{ textAlign: 'left', marginBottom: '16px' }}>
                                     {/* Set up Relay — clickable bullet that opens Relay Setup */}
                                     <button
