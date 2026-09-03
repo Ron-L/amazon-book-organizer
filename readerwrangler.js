@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "7.7.0-alpha.10";  // Build version for this file
+        const ORGANIZER_VERSION = "7.7.0-alpha.11";  // Build version for this file
 
         // v6.19.0 - Dev environments talk to the DEV relay worker (isolated KV namespace), so
         // local/dev testing can never touch production relay data. Mirrors the nav-hub's rule,
@@ -5789,6 +5789,11 @@
                             userNote: item.note,
                             myRating: item.myRating || 0,  // v5.0.0-alpha.175.31 - Personal rating
                             userEdited: item.userEdited || undefined,  // v5.4.7 - Restore user-edited flags
+                            // v7.7.0-alpha.11 - Orphan flags from the scan's follow-up run. The allow-list
+                            // strip class again: the fetcher marked them since v5.0.0, this mapping discarded
+                            // them, and the 🔍 Orphan filter (here AND mobile) showed 0 forever.
+                            orphanStatus: item.orphanStatus || null,
+                            orphanCheckedDate: item.orphanCheckedDate || null,
                             // v6.0.0-alpha.48 - Trash Bin state (preserved for backup restore)
                             isDeleted: item.isDeleted || false,
                             deletedAt: item.deletedAt || null,
@@ -5849,7 +5854,9 @@
                             // v5.0.0-alpha.175.28 - User metadata (tags, notes)
                             tags: item.tags,
                             userNote: item.note,
-                            myRating: item.myRating || 0  // v5.0.0-alpha.175.31 - Personal rating
+                            myRating: item.myRating || 0,  // v5.0.0-alpha.175.31 - Personal rating
+                            orphanStatus: item.orphanStatus || null, // v7.7.0-alpha.11 - see new-format branch
+                            orphanCheckedDate: item.orphanCheckedDate || null
                         };
                     }
                 });
