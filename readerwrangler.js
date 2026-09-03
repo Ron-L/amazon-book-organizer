@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "7.7.0-alpha.7";  // Build version for this file
+        const ORGANIZER_VERSION = "7.7.0-alpha.8";  // Build version for this file
 
         // v6.19.0 - Dev environments talk to the DEV relay worker (isolated KV namespace), so
         // local/dev testing can never touch production relay data. Mirrors the nav-hub's rule,
@@ -8570,14 +8570,25 @@
                                 <div style={{ fontSize: '64px', marginBottom: '20px' }}>📚</div>
                                 <h2 style={{ fontSize: '26px', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '10px' }}>Welcome to ReaderWrangler</h2>
                                 <p style={{ fontSize: '15px', color: 'var(--text-secondary)', marginBottom: '16px' }}>Organize your Kindle library your way.</p>
-                                {/* v7.7.0-alpha.6 - Empty book database but organization present (cleared browser
-                                    data, new machine): without this line the screen is indistinguishable from a
-                                    fresh install and reads as total data loss — proven live in the F1 empty-DB test. */}
-                                {(folders.some(f => !f.isInbox && f.id !== '__inbox__') || bookLists.length > 0 || savedSearches.length > 0) && (
+                                {/* v7.7.0-alpha.6/8 - Empty book database but organization present (cleared browser
+                                    data, evicted IndexedDB, new machine): the screen was indistinguishable from a
+                                    fresh install and read as total data loss — proven live in the F1 empty-DB test.
+                                    alpha.8 (Ron's A/B/C): recovery options BEST-FIRST replace the fresh-install
+                                    tutorial — Import from Relay beats backup (which also rolls the org back) beats
+                                    fetching, and C ends by doing A. */}
+                                {(folders.some(f => !f.isInbox && f.id !== '__inbox__') || bookLists.length > 0 || savedSearches.length > 0) ? (<>
                                     <p style={{ fontSize: '14px', color: 'var(--text-primary)', background: 'var(--bg-hover)', borderRadius: '8px', padding: '10px 14px', marginBottom: '16px' }}>
-                                        ✅ Your folders and lists are intact — restore your books from a backup or run a fetch to fill them again.
+                                        ✅ Your folders and lists are intact — bring your books back and everything falls into place.
                                     </p>
-                                )}
+                                    <div style={{ textAlign: 'left', marginBottom: '16px', fontSize: '13px', color: 'var(--text-secondary)', lineHeight: '1.8' }}>
+                                        <div style={{ fontWeight: 600, color: 'var(--text-primary)', marginBottom: '4px' }}>Try these in order:</div>
+                                        <ol style={{ paddingLeft: '20px', margin: 0 }}>
+                                            <li><strong>Import from Relay</strong> — File › Import from Relay. Your library is most likely still in the cloud; this is the fastest path.</li>
+                                            <li>Relay data missing or expired? <strong>Restore your last backup</strong> — File › Restore Backup… (this also returns your folders and lists to the backup's copy).</li>
+                                            <li>No backup, or it's too old for your liking? <strong>Fetch fresh from Amazon</strong> — click the bookmarklet: "Go to Amazon Library Page", then "Download Library" (repeat for Collections) — then do step 1 again; it will work now.</li>
+                                        </ol>
+                                    </div>
+                                </>) : (
                                 <div style={{ textAlign: 'left', marginBottom: '16px' }}>
                                     {/* Set up Relay — clickable bullet that opens Relay Setup.
                                         v7.7.0-alpha.7 - Hidden once relay IS configured (the intact-org /
@@ -8618,6 +8629,7 @@
                                         <li><span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Repeat occasionally to add newly purchased books.</span></li>
                                     </ul>
                                 </div>
+                                )}
                             </div>
                         </div>
                     ) : (<>
