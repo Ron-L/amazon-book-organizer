@@ -18,7 +18,7 @@
 
 async function fetchAmazonLibrary() {
     const PAGE_TITLE = document.title;
-    const FETCHER_VERSION = 'v5.1.0';
+    const FETCHER_VERSION = 'v5.2.0';
     // Minimum latency floor between Amazon API calls (adopted from the 2026-08 external
     // review, item 4): today's politeness is EMERGENT — it comes from Amazon's backend
     // RTT (~400ms), which is their engineering decision and can change without notice.
@@ -167,6 +167,8 @@ async function fetchAmazonLibrary() {
             koll: 0,         // Kindle Owners' Lending Library
             comixology: 0,   // Comixology Unlimited
             insideAmazon: 0, // Amazon Insider (employee/internal testing program — speculative)
+            publicLibraryLending: 0, // Public-library loan (Libby/OverDrive → Kindle) — field telemetry 2026-09-03
+            audiblePlus: 0,  // Audible Plus subscription catalog item — field telemetry 2026-09-03
             unknown: []      // { asin, title, rawType } - for investigation
         }
     };
@@ -713,6 +715,10 @@ async function fetchAmazonLibrary() {
             case 'KOLL': stats.ownershipTypes.koll++; return 'koll';
             case 'Comixology': stats.ownershipTypes.comixology++; return 'comixology';
             case 'InsideAmazon': stats.ownershipTypes.insideAmazon++; return 'insideAmazon';
+            // v5.2.0 - Both arrived via newOwnershipType telemetry (2026-09-03, same field user).
+            // Borrow-family semantics: time-limited, vanish when returned/lapsed — not owned.
+            case 'PublicLibraryLending': stats.ownershipTypes.publicLibraryLending++; return 'publicLibraryLending';
+            case 'AudiblePlus': stats.ownershipTypes.audiblePlus++; return 'audiblePlus';
             default:
                 stats.ownershipTypes.unknown.push({ asin, title, rawType });
                 return 'unknown';
@@ -1624,7 +1630,8 @@ async function fetchAmazonLibrary() {
                     }
 
                     // Extract ownership type from relationshipSubType (shared helper — see resolveOwnershipType)
-                    // Known values: Purchase, Sample, Sharing, Prime, KindleUnlimited, KOLL, Comixology, InsideAmazon
+                    // Known values: Purchase, Sample, Sharing, Prime, KindleUnlimited, KOLL, Comixology, InsideAmazon,
+                    //               PublicLibraryLending, AudiblePlus
                     const rawOwnershipType = node.relationshipSubType?.[0] || 'Purchase';
                     const ownershipType = resolveOwnershipType(rawOwnershipType, product.asin, title);
 
@@ -2511,6 +2518,12 @@ async function fetchAmazonLibrary() {
         }
         if (stats.ownershipTypes.insideAmazon > 0) {
             console.log(`   Amazon Insider:               ${stats.ownershipTypes.insideAmazon}`);
+        }
+        if (stats.ownershipTypes.publicLibraryLending > 0) {
+            console.log(`   Library Loans:                ${stats.ownershipTypes.publicLibraryLending}`);
+        }
+        if (stats.ownershipTypes.audiblePlus > 0) {
+            console.log(`   Audible Plus:                 ${stats.ownershipTypes.audiblePlus}`);
         }
         if (stats.ownershipTypes.unknown.length > 0) {
             console.log(`   Unknown:                      ${stats.ownershipTypes.unknown.length}`);
