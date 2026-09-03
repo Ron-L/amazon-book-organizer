@@ -18,7 +18,7 @@
 
 async function fetchAmazonLibrary() {
     const PAGE_TITLE = document.title;
-    const FETCHER_VERSION = 'v5.2.2';
+    const FETCHER_VERSION = 'v5.2.3';
     // Minimum latency floor between Amazon API calls (adopted from the 2026-08 external
     // review, item 4): today's politeness is EMERGENT — it comes from Amazon's backend
     // RTT (~400ms), which is their engineering decision and can change without notice.
@@ -366,7 +366,10 @@ async function fetchAmazonLibrary() {
                     </div>
                     <div id="orphanDetail" style="font-size: 13px; color: #666; margin-bottom: 8px;">
                         Already saved — safe to close this tab.
-                        <span title="Your books were uploaded before this check started. If you close now, the check for removed books simply finishes on your next fetch." style="cursor: help;">ℹ️</span>
+                        <span id="orphanInfo" title="What happens if I close?" style="cursor: pointer;">ℹ️</span>
+                    </div>
+                    <div id="orphanInfoPop" style="display: none; font-size: 12px; color: #555; background: #f3f4f6; border-radius: 6px; padding: 8px 10px; margin-bottom: 8px; text-align: left; line-height: 1.5;">
+                        Your books were uploaded before this check started. If you close now, the check for removed books simply finishes on your next fetch.
                     </div>
                     <div id="orphanBarContainer" style="margin-bottom: 8px;">
                         <div style="background: #e0e0e0; border-radius: 4px; height: 8px; overflow: hidden;">
@@ -392,6 +395,13 @@ async function fetchAmazonLibrary() {
                 </div>
             `;
             overlay.querySelector('#closeBtn2')?.addEventListener('click', () => overlay.remove());
+            // v5.2.3 - ℹ️ is click-to-toggle: an info icon AFFORDS clicking, and the native title
+            // tooltip needs a motionless 1s hover nobody gives it (Ron clicked, nothing happened)
+            const infoBtn = overlay.querySelector('#orphanInfo');
+            const infoPop = overlay.querySelector('#orphanInfoPop');
+            if (infoBtn && infoPop) infoBtn.addEventListener('click', () => {
+                infoPop.style.display = infoPop.style.display === 'none' ? 'block' : 'none';
+            });
         }
 
         function updateOrphanProgress(currentPage, estimatedTotalPages) {
