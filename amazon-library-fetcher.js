@@ -18,7 +18,7 @@
 
 async function fetchAmazonLibrary() {
     const PAGE_TITLE = document.title;
-    const FETCHER_VERSION = 'v5.2.5';
+    const FETCHER_VERSION = 'v5.2.6';
 
     // v5.2.4 - Site base URL for dialog assets (the logo), derived the same way the nav hub
     // derives its script base: the bookmarklet injects TARGET_ENV before loading anything.
@@ -30,7 +30,8 @@ async function fetchAmazonLibrary() {
     // Logo with emoji fallback — Amazon's page CSP may block third-party images, and a
     // broken-image glyph would be worse than the emoji ever was.
     // v5.2.5 - Centered ABOVE the title (inline-left "looked off" — Ron); title centers under it.
-    const LOGO_HEADER = `<div style="text-align: center; margin-bottom: 4px;"><img src="${ASSET_BASE}icons/logo-transparent.png" alt="" style="width: 40px; height: auto;" onerror="this.outerHTML='\u{1F4DA}'"></div>`;
+    // (block + margin-auto: never trust host-page CSS — pages that make img display:block defeat text-align centering)
+    const LOGO_HEADER = `<div style="text-align: center; margin-bottom: 4px;"><img src="${ASSET_BASE}icons/logo-transparent.png" alt="" style="width: 40px; height: auto; display: block; margin: 0 auto;" onerror="this.outerHTML='\u{1F4DA}'"></div>`;
     // Minimum latency floor between Amazon API calls (adopted from the 2026-08 external
     // review, item 4): today's politeness is EMERGENT — it comes from Amazon's backend
     // RTT (~400ms), which is their engineering decision and can change without notice.
