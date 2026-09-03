@@ -29,7 +29,8 @@
  *   blocklist:{channelId}              → permanently blocked channel (no TTL)
  *   lifecycle:{channelId}:used         → ISO timestamp of first successful manifest upload (permanent, lifecycle telemetry)
  *   test-alert-counter                 → test alert sequence number
- *   usage-alert:{YYYY-MM-DD}           → threshold alerts already sent today (TTL: 2 days)
+ *   usage-alert:{YYYY-MM-DD}           → counter-threshold alerts already sent today (TTL: 2 days)
+ *   usage-alert:storage-band           → last alerted storage band: 0/25/50/75/90 (no TTL)
  */
 
 const LIBRARY_TTL = 864000;    // 10 days in seconds (legacy fetcher→app relay data)
@@ -919,6 +920,28 @@ async function fetchUsage(env) {
   return { requests, kvReads, kvWrites, kvDeletes, kvStorageMB };
 }
 
+// Highest threshold band at-or-below pct (0 = below every threshold)
+function bandOf(pct) {
+  return THRESHOLDS.reduce((band, t) => (pct >= t ? t : band), 0);
+}
+
+const STORAGE_BAND_KEY = 'usage-alert:storage-band';
+const STORAGE_BAND_HYSTERESIS = 5; // points below a boundary before the nightly re-baseline downgrades (flap guard)
+
+// 2026-09-03 redesign: counters vs levels.
+// COUNTERS (requests/reads/writes/deletes) reset each UTC day, so "you just crossed X%"
+// is honest — but one check can discover several thresholds crossed at once (30-min
+// cadence); alert ONLY the highest band, or a 10%→60% sprint emails a misleading
+// 25%+50% pair implying a chronology nobody witnessed.
+// STORAGE is a LEVEL: it doesn't reset at midnight, but the old per-day alert flags
+// did — so every evening at 00:0x UTC (7 PM CDT) the first checks re-fired "reached
+// 25%"+"reached 50%" while storage sat unchanged above 50%, implying a rise during
+// what was actually a self-shrinking descent. Storage now alerts once per UPWARD band
+// change, worded as a level, with the band remembered across days (no TTL). Downgrades
+// happen only in the 23:55 UTC summary run — the partial-day analytics right after a
+// UTC date roll UNDERSTATE storage (rows fill in lazily), so a 30-min-check downgrade
+// would re-arm the nightly re-alert the moment the fuller reading arrived. A partial
+// max can never overstate, so upward alerts stay safe at full cadence.
 async function checkUsageThresholds(env) {
   if (!env.CF_API_TOKEN || !env.CF_ACCOUNT_ID) return;
 
@@ -931,26 +954,58 @@ async function checkUsageThresholds(env) {
 
   let alertsSent = false;
   for (const [key, { limit, label }] of Object.entries(CF_LIMITS)) {
+    if (key === 'kvStorageMB') continue; // level metric — band logic below
     const current = usage[key];
-    const pct = (current / limit) * 100;
+    const band = bandOf((current / limit) * 100);
+    if (band === 0) continue;
 
-    for (const threshold of THRESHOLDS) {
-      const alertKey = `${key}:${threshold}`;
-      if (pct >= threshold && !alerted[alertKey]) {
-        const unitSuffix = key === 'kvStorageMB' ? ' MB' : '';
-        await sendAlert(env, `Usage threshold: ${label} at ${threshold}%`,
-          `${label} has reached ${threshold}% of the daily free tier limit.\n` +
-          `Current: ${current.toLocaleString()}${unitSuffix} / ${limit.toLocaleString()}${unitSuffix}\n` +
-          `Time: ${new Date().toISOString()}`
-        );
-        alerted[alertKey] = true;
-        alertsSent = true;
-      }
+    if (!alerted[`${key}:${band}`]) {
+      await sendAlert(env, `Usage threshold: ${label} at ${band}%`,
+        `${label} has reached ${band}% of the daily free tier limit.\n` +
+        `Current: ${current.toLocaleString()} / ${limit.toLocaleString()}\n` +
+        `Time: ${new Date().toISOString()}`
+      );
+      alertsSent = true;
     }
+    // Mark the band AND everything below it (counters only rise within a day;
+    // the skipped lower alerts would only add false chronology)
+    for (const t of THRESHOLDS) { if (t <= band) alerted[`${key}:${t}`] = true; }
   }
 
   if (alertsSent) {
     await env.RELAY_KV.put(stateKey, JSON.stringify(alerted), { expirationTtl: 172800 }); // 2 day TTL
+  }
+
+  await checkStorageBand(env, usage);
+}
+
+async function checkStorageBand(env, usage) {
+  const { limit, label } = CF_LIMITS.kvStorageMB;
+  const current = usage.kvStorageMB;
+  const pct = (current / limit) * 100;
+  const band = bandOf(pct);
+
+  const stored = parseInt(await env.RELAY_KV.get(STORAGE_BAND_KEY), 10) || 0;
+  if (band > stored) {
+    await sendAlert(env, `Usage alert: ${label} is ${pct.toFixed(1)}%`,
+      `${label} is at ${current.toLocaleString()} MB of the ${limit.toLocaleString()} MB free tier cap (${pct.toFixed(1)}%) — up into the ${band}% band.\n` +
+      `Storage is a level, not a daily counter: no repeat alerts while it stays in this band. ` +
+      `The daily summary tracks the exact figure (including drops).\n` +
+      `Time: ${new Date().toISOString()}`
+    );
+    await env.RELAY_KV.put(STORAGE_BAND_KEY, String(band));
+  }
+}
+
+// Nightly re-baseline (23:55 UTC, full-day reading): silently lower the remembered
+// storage band so a genuine later re-climb alerts again. Hysteresis stops boundary flap.
+async function rebaselineStorageBand(env, usage) {
+  const { limit } = CF_LIMITS.kvStorageMB;
+  const pct = (usage.kvStorageMB / limit) * 100;
+  const band = bandOf(pct);
+  const stored = parseInt(await env.RELAY_KV.get(STORAGE_BAND_KEY), 10) || 0;
+  if (band < stored && pct < stored - STORAGE_BAND_HYSTERESIS) {
+    await env.RELAY_KV.put(STORAGE_BAND_KEY, String(band));
   }
 }
 
@@ -972,6 +1027,8 @@ async function sendDailySummary(env) {
 
   const body = `ReaderWrangler Relay - Daily Usage Summary\nDate: ${todayStr}\n\n${lines.join('\n')}`;
   await sendAlert(env, `Daily usage summary - ${todayStr}`, body);
+
+  await rebaselineStorageBand(env, usage); // full-day reading = the only trustworthy downgrade
 }
 
 // --- Helpers ---
