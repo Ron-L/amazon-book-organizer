@@ -15,7 +15,7 @@
 (function() {
     'use strict';
 
-    const NAV_HUB_VERSION = 'v2.0.0';
+    const NAV_HUB_VERSION = 'v2.1.0'; // v2.1.0 - logo (with emoji fallback) replaces the 📚 header
 
     // Read TARGET_ENV from window (injected by bookmarklet)
     // Default to 'PROD' for backwards compatibility with old bookmarklets
@@ -187,7 +187,7 @@
             line-height: 1;
             transition: color 0.2s;
         " onmouseover="this.style.color='#333'" onmouseout="this.style.color='#999'" onclick="this.parentElement.remove()">✕</button>
-        <div style="font-size: 48px; margin-bottom: 15px;">📚</div>
+        <div style="margin-bottom: 15px;"><img src="${finalBaseUrl}icons/logo-transparent.png" alt="" style="width: 48px; height: auto;" onerror="this.outerHTML='\u{1F4DA}'"></div>
         <div style="font-size: 20px; font-weight: bold; color: #333; margin-bottom: 25px;">
             ReaderWrangler
         </div>
