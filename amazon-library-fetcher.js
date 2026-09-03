@@ -18,7 +18,7 @@
 
 async function fetchAmazonLibrary() {
     const PAGE_TITLE = document.title;
-    const FETCHER_VERSION = 'v5.2.4';
+    const FETCHER_VERSION = 'v5.2.5';
 
     // v5.2.4 - Site base URL for dialog assets (the logo), derived the same way the nav hub
     // derives its script base: the bookmarklet injects TARGET_ENV before loading anything.
@@ -29,7 +29,8 @@ async function fetchAmazonLibrary() {
             : 'https://readerwrangler.com/';
     // Logo with emoji fallback — Amazon's page CSP may block third-party images, and a
     // broken-image glyph would be worse than the emoji ever was.
-    const LOGO_IMG = `<img src="${ASSET_BASE}icons/logo-transparent-32.png" alt="" style="width: 22px; height: 22px; vertical-align: -4px;" onerror="this.outerHTML='\u{1F4DA}'">`;
+    // v5.2.5 - Centered ABOVE the title (inline-left "looked off" — Ron); title centers under it.
+    const LOGO_HEADER = `<div style="text-align: center; margin-bottom: 4px;"><img src="${ASSET_BASE}icons/logo-transparent.png" alt="" style="width: 40px; height: auto;" onerror="this.outerHTML='\u{1F4DA}'"></div>`;
     // Minimum latency floor between Amazon API calls (adopted from the 2026-08 external
     // review, item 4): today's politeness is EMERGENT — it comes from Amazon's backend
     // RTT (~400ms), which is their engineering decision and can change without notice.
@@ -265,8 +266,9 @@ async function fetchAmazonLibrary() {
                     padding: 4px 8px;
                     line-height: 1;
                 " onmouseover="this.style.color='#333'" onmouseout="this.style.color='#999'">✕</button>
-                <div style="font-size: 18px; font-weight: bold; color: #333; margin-bottom: 10px;">
-                    ${LOGO_IMG} Library Download ${FETCHER_VERSION}
+                ${LOGO_HEADER}
+                <div style="font-size: 18px; font-weight: bold; color: #333; margin-bottom: 10px; text-align: center;">
+                    Library Download ${FETCHER_VERSION}
                 </div>
                 <div id="infoBanner" style="display: none; font-size: 13px; color: #856404; background: #fff3cd; border: 1px solid #ffc107; border-radius: 6px; padding: 8px 12px; margin-bottom: 10px;">
                 </div>
@@ -362,8 +364,9 @@ async function fetchAmazonLibrary() {
             if (!overlay) return;
             // Build the multi-state dialog — fetch result at top, orphan area below
             overlay.innerHTML = `
-                <div style="font-size: 18px; font-weight: bold; color: #333; margin-bottom: 10px;">
-                    ${LOGO_IMG} Library Download ${FETCHER_VERSION}
+                ${LOGO_HEADER}
+                <div style="font-size: 18px; font-weight: bold; color: #333; margin-bottom: 10px; text-align: center;">
+                    Library Download ${FETCHER_VERSION}
                 </div>
                 <div style="font-size: 14px; color: #2e7d32; margin-bottom: 4px; font-weight: 500;">
                     ✅ ${message}
