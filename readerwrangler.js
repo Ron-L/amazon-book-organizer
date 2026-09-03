@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "7.7.0-alpha.9";  // Build version for this file
+        const ORGANIZER_VERSION = "7.7.0-alpha.10";  // Build version for this file
 
         // v6.19.0 - Dev environments talk to the DEV relay worker (isolated KV namespace), so
         // local/dev testing can never touch production relay data. Mirrors the nav-hub's rule,
@@ -8568,7 +8568,7 @@
                         <div className="flex-1 min-h-0 flex items-center justify-center" style={{ background: 'var(--bg-base)' }}>
                             <div style={{ textAlign: 'center', maxWidth: '480px', padding: '40px 20px' }}>
                                 {/* v7.7.0-alpha.9 - The actual logo, not the generic 📚 emoji (Ron: "common and lame given we have a logo") */}
-                                <img src="icons/logo-transparent.png" alt="ReaderWrangler" style={{ width: '80px', height: 'auto', marginBottom: '20px' }} />
+                                <img src="icons/logo-transparent.png" alt="ReaderWrangler" style={{ width: '80px', height: 'auto', display: 'block', margin: '0 auto 20px' }} />
                                 <h2 style={{ fontSize: '26px', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '10px' }}>Welcome to ReaderWrangler</h2>
                                 <p style={{ fontSize: '15px', color: 'var(--text-secondary)', marginBottom: '16px' }}>Organize your Kindle library your way.</p>
                                 {/* v7.7.0-alpha.6/8 - Empty book database but organization present (cleared browser
