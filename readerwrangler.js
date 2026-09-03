@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "7.7.0-alpha.8";  // Build version for this file
+        const ORGANIZER_VERSION = "7.7.0-alpha.9";  // Build version for this file
 
         // v6.19.0 - Dev environments talk to the DEV relay worker (isolated KV namespace), so
         // local/dev testing can never touch production relay data. Mirrors the nav-hub's rule,
@@ -8567,7 +8567,8 @@
                     {books.length === 0 && syncStatus !== 'loading' ? (
                         <div className="flex-1 min-h-0 flex items-center justify-center" style={{ background: 'var(--bg-base)' }}>
                             <div style={{ textAlign: 'center', maxWidth: '480px', padding: '40px 20px' }}>
-                                <div style={{ fontSize: '64px', marginBottom: '20px' }}>📚</div>
+                                {/* v7.7.0-alpha.9 - The actual logo, not the generic 📚 emoji (Ron: "common and lame given we have a logo") */}
+                                <img src="icons/logo-transparent.png" alt="ReaderWrangler" style={{ width: '80px', height: 'auto', marginBottom: '20px' }} />
                                 <h2 style={{ fontSize: '26px', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '10px' }}>Welcome to ReaderWrangler</h2>
                                 <p style={{ fontSize: '15px', color: 'var(--text-secondary)', marginBottom: '16px' }}>Organize your Kindle library your way.</p>
                                 {/* v7.7.0-alpha.6/8 - Empty book database but organization present (cleared browser
@@ -8580,12 +8581,29 @@
                                     <p style={{ fontSize: '14px', color: 'var(--text-primary)', background: 'var(--bg-hover)', borderRadius: '8px', padding: '10px 14px', marginBottom: '16px' }}>
                                         ✅ Your folders and lists are intact — bring your books back and everything falls into place.
                                     </p>
-                                    <div style={{ textAlign: 'left', marginBottom: '16px', fontSize: '13px', color: 'var(--text-secondary)', lineHeight: '1.8' }}>
-                                        <div style={{ fontWeight: 600, color: 'var(--text-primary)', marginBottom: '4px' }}>Try these in order:</div>
-                                        <ol style={{ paddingLeft: '20px', margin: 0 }}>
-                                            <li><strong>Import from Relay</strong> — File › Import from Relay. Your library is most likely still in the cloud; this is the fastest path.</li>
-                                            <li>Relay data missing or expired? <strong>Restore your last backup</strong> — File › Restore Backup… (this also returns your folders and lists to the backup's copy).</li>
-                                            <li>No backup, or it's too old for your liking? <strong>Fetch fresh from Amazon</strong> — click the bookmarklet: "Go to Amazon Library Page", then "Download Library" (repeat for Collections) — then do step 1 again; it will work now.</li>
+                                    <div style={{ textAlign: 'left', marginBottom: '16px', fontSize: '13px', color: 'var(--text-secondary)', lineHeight: '1.7' }}>
+                                        <div style={{ fontWeight: 600, color: 'var(--text-primary)', marginBottom: '6px' }}>Try these in order:</div>
+                                        {/* v7.7.0-alpha.9 - Explicit decimal markers (the global reset strips list
+                                            styles — alpha.8's <ol> rendered as run-together paragraphs) + the full
+                                            bookmarklet sub-steps restored under option 3 */}
+                                        <ol style={{ paddingLeft: '22px', margin: 0, listStyleType: 'decimal' }}>
+                                            <li style={{ marginBottom: '8px' }}>
+                                                <strong>Import from Relay</strong> — File › Import from Relay.<br/>
+                                                <span style={{ color: 'var(--text-muted)' }}>Your library is most likely still in the cloud; this is the fastest path.</span>
+                                            </li>
+                                            <li style={{ marginBottom: '8px' }}>
+                                                <strong>Restore your last backup</strong> — File › Restore Backup… — if relay data is missing or expired.<br/>
+                                                <span style={{ color: 'var(--text-muted)' }}>Also returns your folders and lists to the backup's copy.</span>
+                                            </li>
+                                            <li>
+                                                <strong>Fetch fresh from Amazon</strong> — if you have no backup, or it's too old for your liking:
+                                                <ul style={{ paddingLeft: '18px', listStyleType: 'circle', marginTop: '2px', marginBottom: 0 }}>
+                                                    <li>Click the bookmarklet and select "Go to Amazon Library Page"</li>
+                                                    <li>Click the bookmarklet again and select "Download Library"</li>
+                                                    <li>Repeat for Collections ("Go to Amazon Collections Page", then "Download Collections")</li>
+                                                    <li>Then do step 1 — it will work now</li>
+                                                </ul>
+                                            </li>
                                         </ol>
                                     </div>
                                 </>) : (
