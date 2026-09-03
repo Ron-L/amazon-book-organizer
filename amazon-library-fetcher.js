@@ -18,7 +18,7 @@
 
 async function fetchAmazonLibrary() {
     const PAGE_TITLE = document.title;
-    const FETCHER_VERSION = 'v5.2.1';
+    const FETCHER_VERSION = 'v5.2.2';
     // Minimum latency floor between Amazon API calls (adopted from the 2026-08 external
     // review, item 4): today's politeness is EMERGENT — it comes from Amazon's backend
     // RTT (~400ms), which is their engineering decision and can change without notice.
@@ -362,19 +362,17 @@ async function fetchAmazonLibrary() {
                 </div>
                 <div id="orphanSection" style="border-top: 1px solid #eee; padding-top: 12px;">
                     <div id="orphanStatus" style="font-size: 14px; color: #667eea; margin-bottom: 8px; font-weight: 500;">
-                        Scanning for orphans...
+                        Checking for books removed from Amazon…
                     </div>
                     <div id="orphanDetail" style="font-size: 13px; color: #666; margin-bottom: 8px;">
-                        Checking which books are still in your Amazon library
+                        Already saved — safe to close this tab.
+                        <span title="Your books were uploaded before this check started. If you close now, the check for removed books simply finishes on your next fetch." style="cursor: help;">ℹ️</span>
                     </div>
                     <div id="orphanBarContainer" style="margin-bottom: 8px;">
                         <div style="background: #e0e0e0; border-radius: 4px; height: 8px; overflow: hidden;">
                             <div id="orphanBarFill" style="background: linear-gradient(90deg, #667eea, #764ba2); height: 100%; width: 0%; transition: width 0.3s ease;"></div>
                         </div>
                         <div id="orphanBarText" style="font-size: 12px; color: #666; margin-top: 4px; text-align: center;"></div>
-                    </div>
-                    <div style="font-size: 12px; color: #999;">
-                        Leave this tab open to complete the scan.
                     </div>
                 </div>
                 <div id="closeSection" style="display: none; margin-top: 15px;">
