@@ -25,7 +25,7 @@
 - [ ] Demo-whitelist footgun guard (6f) — warn/confirm before uploading a library dramatically smaller than the relay's; make the active-whitelist banner unmissable; ensure no demo state can ship
 - [ ] "Rebuild library from Amazon (full re-fetch)" affordance (6g) — clear the relay library without DevTools; pairs with the demo-whitelist guard
 - [ ] Pin remaining CDN deps (6h) — React/ReactDOM to an exact 18.x; audit all HTML entry points (Tailwind's durable fix is the precompile step below)
-- [ ] `integrity-homeless` investigation — real user event in v6.11.5; books in IndexedDB with no folder refs
+- [ ] `integrity-homeless` investigation — real user event in v6.11.5 + 2 more field events 2026-09-03; books in IndexedDB with no folder refs. F1 (7.7.0) removed the leading suspected cause (stale-FOLDERS_KEY cold boot referencing nothing for newest books) — WATCH the event post-release before investing a session
 - [ ] **Mid-sweep challenge detection** — classify challenge-shaped responses (HTML where JSON expected, validate-captcha redirect, robot-check 503) in the fetchers' retry path and halt with an honest message: "Amazon is asking for a human check. Open any Amazon page, complete it, then re-run — everything fetched so far is safe." (That last clause is TRUE post-7.0: a halted run is uncommitted and invisible.) Phase 0 already guards startup; this covers a challenge appearing mid-run, which today reads as generic API errors. Never observed yet — cheap pre-launch hardening. (External review item 7 kernel.)
 
 **Launch economics**
@@ -48,7 +48,9 @@
 - [ ] **DEL deletes the folder(s) selected in the right-pane list / Folders overview** — today the DEL key only deletes the folder you're *inside* (`selectedFolderId`), not a right-pane row selection (`getSelectedFolderIds()`). Wire single-select via `deleteFolder`, multi-select via a batch confirm + one compound undo (best once the ops layer has a `deleteFolders(folders)` primitive — don't ship single-only, it's more confusing than neither). Surfaced during ops refactor #1.
 
 
-- [ ] **Folder double-store consolidation (audit F1) + multi-tab hardening** — folders still live in FOLDERS_KEY + the blob (blob wins on load; consolidate to the single guarded source with a load reorder). Multi-tab: Web-Locks read-only second tab + reload-then-promote + live/freeze viewer, designed in docs/design/MULTI-INSTANCE.md §4. Related cleanups from the 2026-08-30 audit: restore still writes the zombie BOOKLISTS_KEY; STATUS_KEY writer is mount-unguarded (cosmetic); `rw_folders` (41KB) is an orphan key no code touches — inspect before deleting. (Prod's dead-channel legacy singles: WIPED 2026-09-02 after TTL/activity evidence review.)
+- [x] **Folder double-store consolidation (audit F1)** — DONE 7.7.0-alpha.1-6 (blob = single gated source, load reorder, all FOLDERS_KEY/BOOKLISTS_KEY writers removed incl. restore zombie, STATUS_KEY guarded, mobile blob-first, loud save failures, Welcome-screen intact-org banner). Bonus kills: restore echo push (alpha.2) + boot echo push (alpha.3) — likely the write-diet residue. `rw_folders` identified (Jan-2026 v5.0.0 folder prototypes) + deleted 2026-09-03. (Prod's dead-channel legacy singles: WIPED 2026-09-02 after TTL/activity evidence review.)
+- [ ] **Delete the legacy FOLDERS_KEY/BOOKLISTS_KEY migration reads** — one release after 7.7.0 (they exist only as a rollback net; the writers are gone)
+- [ ] **Multi-tab hardening — Web-Locks read-only second tab** + reload-then-promote + live/freeze viewer → designed in docs/design/MULTI-INSTANCE.md §4. NEXT in the agreed queue after 7.7.0 lands.
 
 **Auto-Organize ergonomics:**
 - [ ] **Book List right-click menu — drop Move/Copy + block Book-List→folder drag (A)** — a Book List entry is a shortcut; Move/Copy of a shortcut INTO a folder is incoherent. When viewing a Book List, remove those two menu items (keep Add-to-Book-List, Remove-from-list, Edit, reorder); block plain AND Ctrl drag from a Book List onto a folder. (Ron, 2026-08-08 — the muddled Book-List→Inbox "move" that created the Inbox+folder+list triple-membership mess.)
@@ -69,7 +71,9 @@
 - [ ] **Book Lists management view** + generic orderable-left-pane-section ordering (Folders/Views/Book Lists uniform) → see docs/design/FOLDER-ORDERING.md (spec)
 - [ ] Delete from All Books — soft-delete to Trash, removing from ALL folders + Book Lists at once (reuse membership snapshot; confirm dialog discloses count)
 - [ ] Rectangle/Lasso selection in cover view (extends `explorerSelectedItems`)
-- [ ] Fetcher follow-ups: ownership-**upgrade** live positive test; recovery-sweep Stage 2 (fold into orphan scan); un-trash on ownership upgrade (storage.js); fix the "772%" enriched ratio
+- [ ] **Hidden books: 3-state control** (ratified 2026-09-03) — Show Hidden is a visibility toggle, not a finder ("find the 2 hidden among 337" is impractical). Hide hidden / Show all / **Only hidden** — the third state answers "what have I hidden?"
+- [ ] **Fetcher: retire the count-triggered recovery sweep** (ratified 2026-09-03) — the trigger compares captured (owned + wishlist) vs Amazon's owned-only total: structurally never equal for any wishlist user, so it full-scans every fetch forever (Ron's live case: 3138 vs 2816, wishlist = 337, orphans = 0, sweep found 0 three runs straight). Replace with set-exact reconciliation INSIDE the existing background orphan scan (amazon − local = missing owned books → refetch by ASIN → rare small follow-up run write; local − amazon = orphans, unchanged). Any surviving count display goes like-for-like (exclude wishlist + tombstoned); examine the ~15 residue (likely wishlist-also-listed / ownership-upgrade candidates).
+- [ ] Fetcher follow-ups: ownership-**upgrade** live positive test; un-trash on ownership upgrade (storage.js); fix the "772%" enriched ratio
 - [ ] Book detail dialog tooltips (esp. Collections = read-only-from-Amazon)
 - [ ] Wishlist fetcher — capture real binding on add (product-page `bindingInformation`), not only after enrichment
 - [ ] Metadata import (paste-list / CSV) + matching → see docs/design/Metadata-Import.md

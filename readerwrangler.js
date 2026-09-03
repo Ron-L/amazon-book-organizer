@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "7.7.0-alpha.6";  // Build version for this file
+        const ORGANIZER_VERSION = "7.7.0-alpha.7";  // Build version for this file
 
         // v6.19.0 - Dev environments talk to the DEV relay worker (isolated KV namespace), so
         // local/dev testing can never touch production relay data. Mirrors the nav-hub's rule,
@@ -8579,8 +8579,11 @@
                                     </p>
                                 )}
                                 <div style={{ textAlign: 'left', marginBottom: '16px' }}>
-                                    {/* Set up Relay — clickable bullet that opens Relay Setup */}
-                                    <button
+                                    {/* Set up Relay — clickable bullet that opens Relay Setup.
+                                        v7.7.0-alpha.7 - Hidden once relay IS configured (the intact-org /
+                                        returning-user case): telling a set-up user to set up reads as noise
+                                        and undermines the "your data is fine" banner above. */}
+                                    {!(window.RWRelay && window.RWRelay.isConfigured()) && <button
                                         onClick={() => { setRelaySetupOpen(true); setRelaySetupSection(null); }}
                                         title="Also available from File › Relay Setup"
                                         style={{
@@ -8598,7 +8601,7 @@
                                             <li>Install the bookmarklet that navigates to those pages</li>
                                             <li>Optionally pair with your phone</li>
                                         </ul>
-                                    </button>
+                                    </button>}
                                     {/* Remaining steps */}
                                     <ul style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: '1.8', paddingLeft: '20px', listStyleType: 'disc', margin: '0' }}>
                                         <li>Fetch your books and collections from Amazon:
