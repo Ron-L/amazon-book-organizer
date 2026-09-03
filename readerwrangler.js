@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "7.7.0-alpha.4";  // Build version for this file
+        const ORGANIZER_VERSION = "7.7.0-alpha.5";  // Build version for this file
 
         // v6.19.0 - Dev environments talk to the DEV relay worker (isolated KV namespace), so
         // local/dev testing can never touch production relay data. Mirrors the nav-hub's rule,
@@ -4890,7 +4890,7 @@
 
                 const makeHref = (env, baseUrl, cacheBust) => {
                     const cb = cacheBust ? `?v='+Date.now()+'` : '';
-                    return `javascript:(function(){window._READERWRANGLER_TARGET_ENV='${env}';${creds}var s=document.createElement('script');s.src='${baseUrl}bookmarklet-nav-hub.js${cb}';s.onerror=function(){var d=document.createElement('div');d.style.cssText='position:fixed;top:10px;right:10px;z-index:999999;background:#fff;border-top:4px solid #dc2626;padding:16px 20px;border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,.2);max-width:320px;font-family:sans-serif;font-size:14px';var h=document.createElement('div');h.style.cssText='color:#dc2626;font-weight:bold;margin-bottom:6px';h.textContent='ReaderWrangler failed to load';var p=document.createElement('div');p.style.color='#374151';p.textContent='Could not reach the server. Check your connection and try again.';var b=document.createElement('button');b.textContent='Close';b.style.cssText='display:block;margin-top:10px;padding:4px 14px;background:#4f46e5;color:white;border:none;border-radius:4px;cursor:pointer;font-size:13px';b.onclick=function(){d.remove()};d.appendChild(h);d.appendChild(p);d.appendChild(b);document.body.appendChild(d)};document.body.appendChild(s);})();`;
+                    return `javascript:(function(){window._READERWRANGLER_TARGET_ENV='${env}';${creds}var s=document.createElement('script');s.src='${baseUrl}bookmarklet-nav-hub.js${cb}';s.onerror=function(){var d=document.createElement('div');d.style.cssText='position:fixed;top:10px;right:10px;z-index:999999;background:#fff;border-top:4px solid #dc2626;padding:16px 20px;border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,.2);max-width:320px;font-family:sans-serif;font-size:14px';var h=document.createElement('div');h.style.cssText='color:#dc2626;font-weight:bold;margin-bottom:6px';h.textContent='ReaderWrangler could not load here';var p=document.createElement('div');p.style.color='#374151';p.textContent='Some sites block bookmarklets — try again from a different tab. If it happens everywhere, check your connection.';var b=document.createElement('button');b.textContent='Close';b.style.cssText='display:block;margin-top:10px;padding:4px 14px;background:#4f46e5;color:white;border:none;border-radius:4px;cursor:pointer;font-size:13px';b.onclick=function(){d.remove()};d.appendChild(h);d.appendChild(p);d.appendChild(b);document.body.appendChild(d)};document.body.appendChild(s);})();`;
                 };
 
                 const bookmarklets = [];
