@@ -1,6 +1,6 @@
 // mobile.js — ReaderWrangler Mobile Viewer
 // MOBILE_VERSION tracks mobile-specific iterations
-const MOBILE_VERSION = '1.8.0-alpha.1'; // suffix mirrors ORGANIZER_VERSION's -alpha.N in any alpha commit touching this file (Ron, 2026-08-30: invisible changes + no build marker = guaranteed mystery)
+const MOBILE_VERSION = '1.8.0-alpha.4'; // suffix mirrors ORGANIZER_VERSION's -alpha.N in any alpha commit touching this file (Ron, 2026-08-30: invisible changes + no build marker = guaranteed mystery)
 console.log(`✅ Mobile viewer ${MOBILE_VERSION} | APP_VERSION: ${APP_VERSION}`);
 
 // v1.7.0 - Which server is this copy talking to? Derived from the page's own address, so an
@@ -417,7 +417,7 @@ function searchChips(filters, tagRegistry) {
     if (filters.search) parts.push(`"${filters.search}"`);
     if (filters.readStatus) parts.push(filters.readStatus === 'READ' ? 'Read' : filters.readStatus === 'UNREAD' ? 'Unread' : filters.readStatus);
     if (filters.tags?.length > 0) parts.push(filters.tags.map(t => (tagRegistry || {})[t]?.label || t).join(', '));
-    if (filters.ownership) parts.push(filters.ownership === 'kindleUnlimited' ? 'KU' : filters.ownership === 'insideAmazon' ? 'Insider' : filters.ownership.charAt(0).toUpperCase() + filters.ownership.slice(1));
+    if (filters.ownership) parts.push(filters.ownership === 'kindleUnlimited' ? 'KU' : filters.ownership === 'insideAmazon' ? 'Insider' : filters.ownership === 'publicLibraryLending' ? 'Library Loan' : filters.ownership === 'audiblePlus' ? 'Audible Plus' : filters.ownership.charAt(0).toUpperCase() + filters.ownership.slice(1));
     if (filters.collections?.length > 0) parts.push(filters.collections.join(', '));
     if (filters.minAmazonRating) parts.push(`${filters.minAmazonRating}+★`);
     if (filters.minMyRating) parts.push(`My ${filters.minMyRating === 'unrated' ? 'Unrated' : filters.minMyRating + '+★'}`);
@@ -1187,6 +1187,8 @@ function CoverCard({ book, coverUrlMap, blankImageBooks, setBlankImageBooks, onT
                         koll: { bg: '#a855f7', text: 'KOLL' },
                         comixology: { bg: '#a855f7', text: 'COMIX' },
                         insideAmazon: { bg: '#a855f7', text: 'INSIDER' },
+                        publicLibraryLending: { bg: '#14b8a6', text: 'LIBRARY' }, // v1.8.0-alpha.4 - field telemetry 2026-09-03
+                        audiblePlus: { bg: '#a855f7', text: 'AUDIBLE+' },
                         unknown: { bg: '#6b7280', text: '?' }
                     };
                     const config = badgeConfig[book.ownershipType];

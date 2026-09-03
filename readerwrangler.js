@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "7.7.0-alpha.3";  // Build version for this file
+        const ORGANIZER_VERSION = "7.7.0-alpha.4";  // Build version for this file
 
         // v6.19.0 - Dev environments talk to the DEV relay worker (isolated KV namespace), so
         // local/dev testing can never touch production relay data. Mirrors the nav-hub's rule,
@@ -65,6 +65,11 @@
             koll:            { label: 'KOLL',             badge: 'bg-purple-500' },
             comixology:      { label: 'Comixology',       badge: 'bg-purple-500' },
             insideAmazon:    { label: 'Insider',          badge: 'bg-purple-500' },
+            // v7.7.0-alpha.4 - Both arrived via fetcher newOwnershipType telemetry (2026-09-03);
+            // classified by fetcher v5.2.0. Library loans wear borrow teal; Audible Plus wears
+            // subscription purple (the KU/Prime family).
+            publicLibraryLending: { label: 'Library Loan', badge: 'bg-teal-500' },
+            audiblePlus:     { label: 'Audible Plus',     badge: 'bg-purple-500' },
             unknown:         { label: 'Unknown',          badge: 'bg-gray-500' }
         };
         const getOwnershipType = (book) =>
@@ -1400,7 +1405,7 @@
                 if (filters.search) parts.push(`"${filters.search}"`);
                 if (filters.readStatus) parts.push(filters.readStatus === 'READ' ? 'Read' : filters.readStatus === 'UNREAD' ? 'Unread' : filters.readStatus);
                 if (filters.tags?.length > 0) parts.push(filters.tags.map(t => tagRegistry[t]?.label || t).join(', '));
-                if (filters.ownership) parts.push(filters.ownership === 'kindleUnlimited' ? 'KU' : filters.ownership === 'insideAmazon' ? 'Insider' : filters.ownership.charAt(0).toUpperCase() + filters.ownership.slice(1));
+                if (filters.ownership) parts.push(filters.ownership === 'kindleUnlimited' ? 'KU' : filters.ownership === 'insideAmazon' ? 'Insider' : filters.ownership === 'publicLibraryLending' ? 'Library Loan' : filters.ownership === 'audiblePlus' ? 'Audible Plus' : filters.ownership.charAt(0).toUpperCase() + filters.ownership.slice(1));
                 if (filters.collections?.length > 0) parts.push(filters.collections.join(', '));
                 if (filters.minAmazonRating) parts.push(`${filters.minAmazonRating}+★`);
                 if (filters.minMyRating) parts.push(`My ${filters.minMyRating === 'unrated' ? 'Unrated' : filters.minMyRating + '+★'}`);
@@ -6872,14 +6877,18 @@
                                     });
                                 } else if (subAction.type === 'REMOVE_BOOKS_FROM_FOLDER') {
                                     // Restore books to folder (undo removal, e.g., restore to Inbox)
+                                    // v7.7.0-alpha.4 - at their ORIGINAL positions (stampRemovalIndices captured
+                                    // them at plan time); missing/-1 index appends, matching the old behavior
                                     updated = updated.map(folder => {
                                         if (folder.id === subAction.folderId) {
                                             const existingIds = new Set(folder.bookIds);
-                                            const booksToRestore = subAction.bookIds.filter(id => !existingIds.has(id));
-                                            return {
-                                                ...folder,
-                                                bookIds: [...folder.bookIds, ...booksToRestore]
-                                            };
+                                            const bookIds = [...folder.bookIds];
+                                            subAction.bookIds.forEach((id, i) => {
+                                                if (existingIds.has(id)) return;
+                                                const idx = subAction.fromIndices?.[i];
+                                                bookIds.splice((idx != null && idx >= 0 && idx <= bookIds.length) ? idx : bookIds.length, 0, id);
+                                            });
+                                            return { ...folder, bookIds };
                                         }
                                         return folder;
                                     });
@@ -7702,6 +7711,24 @@
                 };
             };
 
+            // v7.7.0-alpha.4 - Stamp REMOVE_BOOKS_FROM_FOLDER sub-actions with each book's index in the
+            // PRE-plan source folder so undo restores positions instead of appending (an undone
+            // Auto-Organize was landing the book at the BOTTOM of a 50+ Inbox, hidden below the
+            // Show-All fold — the same fromIndices idea MOVE_ITEMS and REMOVE_BOOKS_FOLDER already
+            // use). Pairs sort ascending so sequential splice on undo reconstructs the original
+            // order; a book not found (-1, defensive) sorts last and appends.
+            const stampRemovalIndices = (subActions, preFolders) => {
+                for (const sa of subActions) {
+                    if (sa.type !== 'REMOVE_BOOKS_FROM_FOLDER') continue;
+                    const srcIds = (preFolders.find(f => f.id === sa.folderId)?.bookIds) || [];
+                    const pairs = sa.bookIds.map(id => [id, srcIds.indexOf(id)])
+                        .sort((a, b) => (a[1] < 0 ? 1e9 : a[1]) - (b[1] < 0 ? 1e9 : b[1]));
+                    sa.bookIds = pairs.map(p => p[0]);
+                    sa.fromIndices = pairs.map(p => p[1]);
+                }
+                return subActions;
+            };
+
             // v5.1.0-alpha.29c - Phase 3.3: Extract organize logic to eliminate ~250 lines of duplication
             // v6.13.0-alpha.4 - Shared apply step for BOTH the wizard and the right-click Auto-Organize: compute
             // the plan SYNCHRONOUSLY from current folders, apply it, and record ONE undo. (Computing inside the
@@ -7716,7 +7743,7 @@
                     recordAction({
                         type: 'WIZARD_ORGANIZE',
                         description: `${label} (${plan.totalBooksOrganized} book${plan.totalBooksOrganized !== 1 ? 's' : ''})`,
-                        subActions: plan.subActions
+                        subActions: stampRemovalIndices(plan.subActions, folders) // v7.7.0-alpha.4 - positional undo
                     });
                 }
                 return plan;
@@ -8001,7 +8028,7 @@
                     // v7.6.0-alpha.11 (wave C) - Place engine-created folders (same as applyOrganizePlan)
                     const createdIds = new Set(subActions.filter(a => a.type === 'CREATE_FOLDER').map(a => a.folderId));
                     setFolders(placeNewFoldersAtTop(newFolders, newFolders.filter(f => createdIds.has(f.id))));
-                    recordAction({ type: 'WIZARD_ORGANIZE', description: `${label} + removed ${selectedFiledIds.length} already-filed from ${where}`, subActions });
+                    recordAction({ type: 'WIZARD_ORGANIZE', description: `${label} + removed ${selectedFiledIds.length} already-filed from ${where}`, subActions: stampRemovalIndices(subActions, folders) }); // v7.7.0-alpha.4 - positional undo
                     showToast(`Organized ${plan.totalBooksOrganized} book${plan.totalBooksOrganized !== 1 ? 's' : ''} and removed ${selectedFiledIds.length} from ${where}`);
                 } else if (willOrganize) {
                     const plan = applyOrganizePlan(moverGroupsToApply, applyOpts, label);
@@ -8875,7 +8902,9 @@
                                             'kindleUnlimited': 'Kindle Unlimited',
                                             'koll': 'KOLL',
                                             'comixology': 'Comixology',
-                                            'insideAmazon': 'Amazon Insider'
+                                            'insideAmazon': 'Amazon Insider',
+                                            'publicLibraryLending': 'Library Loan',
+                                            'audiblePlus': 'Audible Plus'
                                         };
                                         return labels[ownershipFilter] || ownershipFilter;
                                     })()
@@ -8917,6 +8946,8 @@
                                         { value: 'koll', label: 'KOLL' },
                                         { value: 'comixology', label: 'Comixology' },
                                         { value: 'insideAmazon', label: 'Amazon Insider' },
+                                        { value: 'publicLibraryLending', label: 'Library Loan' },
+                                        { value: 'audiblePlus', label: 'Audible Plus' },
                                         { value: 'orphan', label: '🔍 Orphan (removed from Amazon)' }
                                     ].map(type => (
                                         <div
@@ -9626,7 +9657,7 @@
                                 {collectionFilter && (ratingFilter || seriesFilter || datePreset || tagFilter?.length > 0 || selectedCollections.length > 0) && <span>|</span>}
                                 {ratingFilter && <span>Rating: {ratingFilter}+★</span>}
                                 {ratingFilter && (ownershipFilter || seriesFilter || datePreset || tagFilter?.length > 0 || selectedCollections.length > 0) && <span>|</span>}
-                                {ownershipFilter && <span>Ownership: {ownershipFilter === 'kindleUnlimited' ? 'Kindle Unlimited' : ownershipFilter === 'insideAmazon' ? 'Amazon Insider' : ownershipFilter === 'purchased' ? 'Owned' : ownershipFilter.charAt(0).toUpperCase() + ownershipFilter.slice(1)}</span>}
+                                {ownershipFilter && <span>Ownership: {ownershipFilter === 'kindleUnlimited' ? 'Kindle Unlimited' : ownershipFilter === 'insideAmazon' ? 'Amazon Insider' : ownershipFilter === 'purchased' ? 'Owned' : ownershipFilter === 'publicLibraryLending' ? 'Library Loan' : ownershipFilter === 'audiblePlus' ? 'Audible Plus' : ownershipFilter.charAt(0).toUpperCase() + ownershipFilter.slice(1)}</span>}
                                 {ownershipFilter && (seriesFilter || datePreset || tagFilter?.length > 0 || selectedCollections.length > 0) && <span>|</span>}
                                 {seriesFilter && <span>Series: {seriesFilter === 'NOT_IN_SERIES' ? 'Not in Series' : seriesFilter}</span>}
                                 {seriesFilter && (datePreset || tagFilter?.length > 0 || selectedCollections.length > 0) && <span>|</span>}
@@ -16556,6 +16587,8 @@
                                                                     koll: { bg: 'bg-purple-500', text: 'KOLL' },
                                                                     comixology: { bg: 'bg-purple-500', text: 'COMIX' },
                                                                     insideAmazon: { bg: 'bg-purple-500', text: 'INSIDER' },
+                                                                    publicLibraryLending: { bg: 'bg-teal-500', text: 'LIBRARY' },
+                                                                    audiblePlus: { bg: 'bg-purple-500', text: 'AUDIBLE+' },
                                                                     unknown: { bg: 'bg-gray-500', text: '?' }
                                                                 };
                                                                 const config = badgeConfig[book.ownershipType];
