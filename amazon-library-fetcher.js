@@ -18,7 +18,7 @@
 
 async function fetchAmazonLibrary() {
     const PAGE_TITLE = document.title;
-    const FETCHER_VERSION = 'v5.2.0';
+    const FETCHER_VERSION = 'v5.2.1';
     // Minimum latency floor between Amazon API calls (adopted from the 2026-08 external
     // review, item 4): today's politeness is EMERGENT — it comes from Amazon's backend
     // RTT (~400ms), which is their engineering decision and can change without notice.
@@ -59,7 +59,6 @@ async function fetchAmazonLibrary() {
     // resolve to nothing, so a batch made ENTIRELY of them returned empty (which is what the recovery batches
     // were). With the header they resolve, so batching is safe again (validated: 30/30, incl. hash-dependent).
     const RECOVERY_BATCH_SIZE = 30;
-    const LIBRARY_FILENAME = 'amazon-library.json';
     const startTime = Date.now();
 
     // Retry configuration for API errors
@@ -2426,7 +2425,7 @@ async function fetchAmazonLibrary() {
         // Step 7: Merge and save library
         stats.timing.mergeStart = Date.now();
         console.log('[7/7] Merging with existing data and saving library...');
-        progressUI.updatePhase('Saving Library', 'Merging and downloading library file');
+        progressUI.updatePhase('Saving Library', 'Merging fetched data...');
 
         // v4.11.7 - Retro-backfill series for EXISTING books that have none (dead editions recovered by earlier
         // runs before this parser existed, e.g. the Gideon Sable novels). Title-only, precision-first; never
@@ -2482,7 +2481,7 @@ async function fetchAmazonLibrary() {
         const totalDuration = Date.now() - startTime;
 
         console.log('\n========================================');
-        console.log('✅ FETCH COMPLETE - READY TO SAVE');
+        console.log('✅ FETCH COMPLETE - READY TO UPLOAD');
         console.log('========================================\n');
 
         console.log('⏱️  TIMING');
@@ -2741,19 +2740,17 @@ async function fetchAmazonLibrary() {
             console.log('');
         }
 
-        console.log('💾 FILE SAVED');
-        console.log(`   ✅ ${LIBRARY_FILENAME} (${finalBooks.length} books)`);
+        // v5.2.1 - Pre-relay fossil replaced: the old block claimed a file was saved to
+        // Downloads (nothing is written locally since the relay became the save path).
+        console.log('💾 SAVED TO CLOUD');
+        console.log(`   ✅ ${finalBooks.length} books sent through your encrypted relay`);
         console.log('========================================\n');
         console.log('👉 Next steps:');
-        console.log('   1. Find the library file in your Downloads folder');
-        console.log('   2. Keep it somewhere you can find it later (Desktop, Documents, etc.)');
-        console.log('   3. Open ReaderWrangler and load your library file to start organizing!');
-        console.log('   4. Status bar will show your data is fresh\n');
+        console.log('   1. Open ReaderWrangler (or switch to its tab)');
+        console.log('   2. Import when the update banner appears — your new books land in the Inbox\n');
         console.log('💡 Next time you run this script:');
-        console.log('   - Select amazon-library.json when prompted');
-        console.log('   - Only NEW books will be fetched & enriched');
-        console.log('   - Library file will be updated automatically');
-        console.log('   - Status bar will reflect the new fetch');
+        console.log('   - Only NEW books will be fetched & enriched (fast)');
+        console.log('   - Tags, prices, and enrichment refresh for the rest');
         console.log('========================================\n');
 
         // Show fetch-complete UI and begin orphan scan
