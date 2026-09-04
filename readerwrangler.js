@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "7.7.0-alpha.13";  // Build version for this file
+        const ORGANIZER_VERSION = "7.7.0-alpha.14";  // Build version for this file
 
         // v6.19.0 - Dev environments talk to the DEV relay worker (isolated KV namespace), so
         // local/dev testing can never touch production relay data. Mirrors the nav-hub's rule,
@@ -18591,7 +18591,8 @@
                                                         series: book.series || '',
                                                         seriesPosition: book.seriesPosition != null ? String(book.seriesPosition) : '',
                                                         userNote: book.userNote || '',
-                                                        onWishlist: book.onWishlist || false
+                                                        onWishlist: book.onWishlist || false,
+                                                        binding: book.binding || '' // v7.7.0-alpha.14 - this inline duplicate of enterEditMode missed alpha.13's new field: saving threw at binding.trim() (silent edit failure)
                                                     });
                                                     setIsEditingBook(true);
                                                     setExplorerBookContextMenu(null);
