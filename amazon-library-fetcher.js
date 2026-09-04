@@ -18,7 +18,7 @@
 
 async function fetchAmazonLibrary() {
     const PAGE_TITLE = document.title;
-    const FETCHER_VERSION = 'v5.3.0';
+    const FETCHER_VERSION = 'v5.3.1';
 
     // v5.2.4 - Site base URL for dialog assets (the logo), derived the same way the nav hub
     // derives its script base: the bookmarklet injects TARGET_ENV before loading anything.
@@ -2900,9 +2900,13 @@ async function fetchAmazonLibrary() {
             let bindingBackfilled = 0; // v5.3.0
             for (const book of finalBooks) {
                 // v5.3.0 - Blank-Format backfill (FORMAT POLICY): the walk carried each book's
-                // verbatim binding — fill blanks with Amazon's truth. Never overwrites an existing
-                // value; user-edited Formats are additionally protected app-side on merge.
-                if (!book.binding && scanBindings.has(book.asin)) {
+                // verbatim binding — fill blanks with Amazon's truth. Never overwrites a real
+                // value; user-edited Formats are skipped here AND protected app-side on merge.
+                // v5.3.1 - 'Kindle eBook' counts as blank: it was the app's pre-7.7 invented
+                // default, round-tripped into the canonical via backup/restore pushes — never a
+                // real Amazon value (Amazon says 'Kindle Edition'). It silently blocked the
+                // entire first backfill (0 filled on a library with 262 of them).
+                if ((!book.binding || book.binding === 'Kindle eBook') && !book.userEdited?.binding && scanBindings.has(book.asin)) {
                     book.binding = scanBindings.get(book.asin);
                     bindingBackfilled++;
                 }
