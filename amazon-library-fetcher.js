@@ -18,7 +18,7 @@
 
 async function fetchAmazonLibrary() {
     const PAGE_TITLE = document.title;
-    const FETCHER_VERSION = 'v5.2.6';
+    const FETCHER_VERSION = 'v5.3.0';
 
     // v5.2.4 - Site base URL for dialog assets (the logo), derived the same way the nav hub
     // derives its script base: the bookmarklet injects TARGET_ENV before loading anything.
@@ -114,17 +114,14 @@ async function fetchAmazonLibrary() {
         }
     }
 
-    // Book-only bindings (filter out non-book items)
-    const BOOK_BINDINGS = [
-        'Kindle Edition',
-        'Paperback',
-        'Hardcover',
-        'Mass Market Paperback',
-        'Board book',
-        'Unknown Binding',
-        'Audible Audiobook',
-        'Kindle Edition with Audio/Video'
-    ];
+    // v5.3.0 (2026-09-04) - FORMAT POLICY: the BOOK_BINDINGS allow-list that lived here is GONE,
+    // deliberately (see docs/design/FORMAT-POLICY.md before reintroducing anything like it).
+    // Amazon's format vocabulary is an unbounded folksonomy — a real children's book in Ron's
+    // library was reclassified as "Shoes" — so any format allow/deny list silently drops real
+    // content the day Amazon invents a label. Worse, the list's use inside the orphan scan's
+    // verification loop false-flagged 13 present books as removed-from-Amazon for months.
+    // Policy now: capture whatever the library API lists, record the binding VERBATIM, and
+    // never judge format anywhere. Users control visibility with folders/filters/edits.
 
     // Global tracking for statistics
     const stats = {
@@ -150,7 +147,7 @@ async function fetchAmazonLibrary() {
             retry3: 0,
             failed: 0
         },
-        nonBooksFiltered: [],
+        formatsSeen: {},   // v5.3.0 - distinct binding values among NEW books (observability, never filtering)
         booksWithoutAuthors: [],
         aiSummariesUsed: [],
         apiErrorBooks: [],
@@ -1625,12 +1622,10 @@ async function fetchAmazonLibrary() {
 
                     const binding = product.bindingInformation?.binding?.displayString || null;
 
-                    // Filter out non-book items (DVDs, CDs, Maps, Shoes, etc.)
-                    if (binding && !BOOK_BINDINGS.includes(binding)) {
-                        stats.nonBooksFiltered.push({ title, asin: product.asin, binding });
-                        console.log(`   ⏭️  Skipping non-book: ${title} (${binding})`);
-                        continue;
-                    }
+                    // v5.3.0 - No format filtering (FORMAT POLICY, see top of file): everything the
+                    // library lists is captured, binding recorded verbatim. Count formats for the summary.
+                    const fmtKey = binding || '(none reported)';
+                    stats.formatsSeen[fmtKey] = (stats.formatsSeen[fmtKey] || 0) + 1;
 
                     // Track books without authors
                     if (!authors || authors === 'Unknown Author') {
@@ -1848,11 +1843,10 @@ async function fetchAmazonLibrary() {
                         const title = product.title?.displayString || 'Unknown Title';
                         // v4.11.0 - NO binding filter here: these are items Amazon already lists in the owned
                         // Kindle library, so they're legitimate. And getProducts' binding is unreliable for them
-                        // (it returned "Audio CD" for a Kindle-owned book — likely the same catalog inconsistency
-                        // that nulls them in the list query), so keep it only if it's a real book binding, else
-                        // leave it null rather than store a wrong Format.
-                        let binding = product.bindingInformation?.binding?.displayString || null;
-                        if (binding && !BOOK_BINDINGS.includes(binding)) binding = null;
+                        // (it once returned "Audio CD" for a Kindle-owned book). v5.3.0 FORMAT POLICY:
+                        // store it VERBATIM anyway — an odd label is information, a nulled one is a lie,
+                        // and the user can edit Format in the app since 7.7.0.
+                        const binding = product.bindingInformation?.binding?.displayString || null;
                         const authors = extractAuthors(product);
                         const { coverUrl, coverUrlHiRes } = extractCoverUrls(product);
                         const seriesData = product.bookSeries?.singleBookView?.series;
@@ -2610,19 +2604,14 @@ async function fetchAmazonLibrary() {
             } catch (e) { console.warn('Age-cap check skipped:', e.message); }
         }
 
-        const totalFetched = newBooks.length + stats.nonBooksFiltered.length;
         console.log('📊 FETCH RESULTS');
-        console.log(`   Total books fetched:          ${totalFetched}`);
-        if (stats.nonBooksFiltered.length > 0) {
-            console.log(`   Non-books filtered:           ${stats.nonBooksFiltered.length}`);
-            stats.nonBooksFiltered.slice(0, 3).forEach(item => {
-                console.log(`      • ${item.title.substring(0, 50)} (${item.binding})`);
-            });
-            if (stats.nonBooksFiltered.length > 3) {
-                console.log(`      • ... and ${stats.nonBooksFiltered.length - 3} more`);
-            }
+        console.log(`   Total books fetched:          ${newBooks.length}`);
+        // v5.3.0 - FORMAT POLICY: nothing is filtered by format anymore; report what was seen instead
+        const fmtEntries = Object.entries(stats.formatsSeen);
+        if (fmtEntries.length > 0) {
+            console.log(`   Formats seen (new books):     ${fmtEntries.map(([f, n]) => `${f} ×${n}`).join(', ')}`);
         }
-        console.log(`   Books kept:                   ${newBooks.length}\n`);
+        console.log('');
 
         // v4.11.0 - COMPLETENESS / reconciliation (no silent drops)
         console.log('🧮 COMPLETENESS');
@@ -2792,6 +2781,7 @@ async function fetchAmazonLibrary() {
 
         try {
             const amazonAsins = new Set();
+            const scanBindings = new Map(); // v5.3.0 - asin → verbatim binding, for blank-Format backfill
             let orphanCursor = "";
             let orphanPage = 0;
             let orphanHasMore = true;
@@ -2874,12 +2864,16 @@ async function fetchAmazonLibrary() {
                     const product = node.product;
                     // v4.11.0 - A null-product node is STILL present in Amazon's library (just unresolved by the
                     // list query), so it is NOT an orphan — count its ASIN so recovered books aren't false-flagged.
-                    // Only skip genuine non-books (product present with a non-book binding).
-                    if (product) {
-                        const binding = product.bindingInformation?.binding?.displayString || null;
-                        if (binding && !BOOK_BINDINGS.includes(binding)) continue; // Skip real non-books
-                    }
+                    // v5.3.0 - THE FALSE-ORPHAN FIX (2026-09-04): the binding skip that lived here made the
+                    // verification set format-judgmental — 13 present books (maps, a DVD, a book Amazon calls
+                    // "Shoes") were flagged "no longer in your Amazon library" on every scan because their
+                    // bindings weren't in BOOK_BINDINGS. Existence-verification must be BINDING-BLIND:
+                    // presence is presence.
                     amazonAsins.add(node.asin);
+                    // v5.3.0 - Free backfill: the scan already carries each node's binding — remember it so
+                    // blank-Format library books can be filled with Amazon's verbatim value below.
+                    const scanBinding = product?.bindingInformation?.binding?.displayString || null;
+                    if (scanBinding) scanBindings.set(node.asin, scanBinding);
                 }
 
                 console.log(`   📖 Orphan scan page ${orphanPage}${orphanTotalPages ? '/' + orphanTotalPages : ''}: ${library.edges.length} items (${amazonAsins.size} book ASINs total)`);
@@ -2903,7 +2897,15 @@ async function fetchAmazonLibrary() {
             const orphanScanDate = new Date().toISOString();
 
             // Mark all books with orphan status
+            let bindingBackfilled = 0; // v5.3.0
             for (const book of finalBooks) {
+                // v5.3.0 - Blank-Format backfill (FORMAT POLICY): the walk carried each book's
+                // verbatim binding — fill blanks with Amazon's truth. Never overwrites an existing
+                // value; user-edited Formats are additionally protected app-side on merge.
+                if (!book.binding && scanBindings.has(book.asin)) {
+                    book.binding = scanBindings.get(book.asin);
+                    bindingBackfilled++;
+                }
                 if (book.onWishlist) {
                     // Wishlist books are not in the library scan — don't mark them
                     continue;
@@ -2918,6 +2920,7 @@ async function fetchAmazonLibrary() {
             }
 
             console.log(`   📊 Orphans found: ${orphanedBooks.length}`);
+            if (bindingBackfilled > 0) console.log(`   🏷️ Formats backfilled from Amazon (blank → verbatim): ${bindingBackfilled}`);
 
             // Build ownership breakdown for orphans
             if (orphanedBooks.length > 0) {
