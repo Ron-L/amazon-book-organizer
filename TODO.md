@@ -49,7 +49,7 @@
 
 
 - [x] **Folder double-store consolidation (audit F1)** — DONE 7.7.0-alpha.1-6 (blob = single gated source, load reorder, all FOLDERS_KEY/BOOKLISTS_KEY writers removed incl. restore zombie, STATUS_KEY guarded, mobile blob-first, loud save failures, Welcome-screen intact-org banner). Bonus kills: restore echo push (alpha.2) + boot echo push (alpha.3) — likely the write-diet residue. `rw_folders` identified (Jan-2026 v5.0.0 folder prototypes) + deleted 2026-09-03. (Prod's dead-channel legacy singles: WIPED 2026-09-02 after TTL/activity evidence review.)
-- [ ] **Delete the legacy FOLDERS_KEY/BOOKLISTS_KEY migration reads** — one release after 7.7.0 (they exist only as a rollback net; the writers are gone)
+- [ ] **Legacy FOLDERS_KEY/BOOKLISTS_KEY migration reads: KEEP INDEFINITELY** (Ron 2026-09-04: field users update on their own schedule — GoatCounter shows real users; the reads are cheap and dated comments explain them). Revisit only with adoption evidence, never on a release-count schedule.
 - [ ] **Multi-tab hardening — Web-Locks read-only second tab** + reload-then-promote + live/freeze viewer → designed in docs/design/MULTI-INSTANCE.md §4. NEXT in the agreed queue after 7.7.0 lands.
 
 **Auto-Organize ergonomics:**
