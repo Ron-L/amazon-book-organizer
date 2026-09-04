@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "7.7.0-alpha.12";  // Build version for this file
+        const ORGANIZER_VERSION = "7.7.0-alpha.13";  // Build version for this file
 
         // v6.19.0 - Dev environments talk to the DEV relay worker (isolated KV namespace), so
         // local/dev testing can never touch production relay data. Mirrors the nav-hub's rule,
@@ -704,7 +704,7 @@
             const [tfcSelectedRemoval, setTfcSelectedRemoval] = useState(null); // selected removal group tag label
             const [tfcCheckedRemovals, setTfcCheckedRemovals] = useState(new Set()); // removal group labels checked for removal
             const [tfcUncheckedRemovalBooks, setTfcUncheckedRemovalBooks] = useState({}); // {tagLabel: Set of bookIds to keep}
-            const [editBookFields, setEditBookFields] = useState({ title: '', author: '', series: '', seriesPosition: '', userNote: '', onWishlist: false });
+            const [editBookFields, setEditBookFields] = useState({ title: '', author: '', series: '', seriesPosition: '', userNote: '', onWishlist: false, binding: '' }); // v7.7.0-alpha.13 - Format is user-editable (FORMAT POLICY)
             const [editBookSeriesDropdownOpen, setEditBookSeriesDropdownOpen] = useState(false);
             const editBookSeriesFilterRef = useRef(false); // true = filter by typed text, false = show all
             const editBookSeriesInputRef = useRef(null); // ref to series input for focus management
@@ -6252,7 +6252,7 @@
                 setModalBook(null);
                 setModalNavOverride(null);
                 setIsEditingBook(false);
-                setEditBookFields({ title: '', author: '', series: '', seriesPosition: '', userNote: '', onWishlist: false });
+                setEditBookFields({ title: '', author: '', series: '', seriesPosition: '', userNote: '', onWishlist: false, binding: '' });
                 setEditBookSeriesDropdownOpen(false);
                 setShareDropdownOpen(false);
                 setContextSubmenu(null);
@@ -6267,7 +6267,8 @@
                     series: modalBook.series || '',
                     seriesPosition: modalBook.seriesPosition != null ? String(modalBook.seriesPosition) : '',
                     userNote: modalBook.userNote || '',
-                    onWishlist: modalBook.onWishlist || false
+                    onWishlist: modalBook.onWishlist || false,
+                    binding: modalBook.binding || '' // v7.7.0-alpha.13
                 });
                 setEditBookSeriesDropdownOpen(false);
                 setIsEditingBook(true);
@@ -6275,7 +6276,7 @@
 
             const cancelEditMode = () => {
                 setIsEditingBook(false);
-                setEditBookFields({ title: '', author: '', series: '', seriesPosition: '', userNote: '', onWishlist: false });
+                setEditBookFields({ title: '', author: '', series: '', seriesPosition: '', userNote: '', onWishlist: false, binding: '' });
                 setEditBookSeriesDropdownOpen(false);
             };
 
@@ -6309,6 +6310,14 @@
                 if (newNote !== oldNote) {
                     previousValues.userNote = oldNote;
                     newValues.userNote = newNote;
+                }
+                // v7.7.0-alpha.13 (FORMAT POLICY) - Format is user-editable; blank = honest unknown.
+                // Lands in userEdited.binding via editedFields below → wins over every future fetch.
+                const newBinding = editBookFields.binding.trim() || undefined;
+                const oldBinding = modalBook.binding || undefined;
+                if (newBinding !== oldBinding) {
+                    previousValues.binding = oldBinding;
+                    newValues.binding = newBinding;
                 }
                 // v5.4.8 - Ownership toggle
                 if (editBookFields.onWishlist !== (modalBook.onWishlist || false)) {
@@ -6362,7 +6371,7 @@
             const openBulkEditModal = (field) => {
                 const selectedBookIds = getSelectedBookIds();
                 const selectedBooks = selectedBookIds.map(id => books.find(b => b.id === id)).filter(Boolean);
-                const fieldKey = field === 'position' ? 'seriesPosition' : (field === 'ownership' ? 'onWishlist' : field);
+                const fieldKey = field === 'position' ? 'seriesPosition' : (field === 'ownership' ? 'onWishlist' : (field === 'format' ? 'binding' : field)); // v7.7.0-alpha.13 - format
                 const values = new Set(selectedBooks.map(b => {
                     const val = b[fieldKey];
                     return val != null ? String(val) : '';
@@ -6380,7 +6389,7 @@
 
             const saveBulkEdit = () => {
                 if (!bulkEditField || bulkEditBookIds.length === 0) return;
-                const fieldKey = bulkEditField === 'position' ? 'seriesPosition' : (bulkEditField === 'ownership' ? 'onWishlist' : bulkEditField);
+                const fieldKey = bulkEditField === 'position' ? 'seriesPosition' : (bulkEditField === 'ownership' ? 'onWishlist' : (bulkEditField === 'format' ? 'binding' : bulkEditField)); // v7.7.0-alpha.13
                 let newValue;
                 if (bulkEditField === 'position') {
                     newValue = bulkEditInput.trim() ? parseFloat(bulkEditInput) : null;
@@ -6413,7 +6422,7 @@
                     saveBooksToIndexedDB(updated);
                     return updated;
                 });
-                const fieldLabel = bulkEditField === 'position' ? 'position' : (bulkEditField === 'ownership' ? 'ownership' : bulkEditField);
+                const fieldLabel = bulkEditField === 'position' ? 'position' : (bulkEditField === 'ownership' ? 'ownership' : (bulkEditField === 'format' ? 'format' : bulkEditField));
                 const count = bulkEditBookIds.length;
                 recordAction({
                     type: 'BULK_EDIT_BOOKS',
@@ -12212,6 +12221,7 @@
                             author:    { title: 'Edit Author',    fieldKey: 'author' },
                             series:    { title: 'Edit Series',    fieldKey: 'series' },
                             position:  { title: 'Edit Position',  fieldKey: 'seriesPosition' },
+                            format:    { title: 'Edit Format',    fieldKey: 'binding' }, // v7.7.0-alpha.13 - FORMAT POLICY
                             ownership: { title: 'Owned / Wishlist', fieldKey: 'onWishlist' }
                         };
                         const config = fieldConfig[bulkEditField];
@@ -12305,6 +12315,22 @@
                                                 placeholder={placeholder || 'e.g., 1, 1.5'}
                                                 className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                                 autoFocus />
+                                        )}
+                                        {bulkEditField === 'format' && (
+                                            /* v7.7.0-alpha.13 - FORMAT POLICY: free text + suggestions from the library's own
+                                               vocabulary (never a hardcoded dropdown — formats are an unbounded folksonomy).
+                                               Typical use: sort All Books by Format, select the blanks, set "Kindle Edition". */
+                                            <>
+                                                <input type="text" value={bulkEditInput} list="rw-format-options"
+                                                    onChange={(e) => setBulkEditInput(e.target.value)}
+                                                    onKeyDown={(e) => { if (e.key !== 'Escape') e.stopPropagation(); }}
+                                                    placeholder={placeholder || 'e.g., Kindle Edition (blank = unknown)'}
+                                                    className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                                    autoFocus />
+                                                <datalist id="rw-format-options">
+                                                    {[...new Set(['Kindle Edition', 'Paperback', 'Hardcover', 'Audible Audiobook', ...books.map(b => b.binding).filter(Boolean)])].sort().map(f => <option key={f} value={f} />)}
+                                                </datalist>
+                                            </>
                                         )}
                                         {bulkEditField === 'ownership' && (
                                             <div className="flex gap-2">
@@ -12598,6 +12624,18 @@
                                                         <option value="purchased">Owned</option>
                                                         <option value="wishlist">Wishlist Item</option>
                                                     </select>
+                                                    {/* v7.7.0-alpha.13 - FORMAT POLICY: user-editable Format (fixes "Shoes",
+                                                        fills blanks); suggestions from the library's own vocabulary */}
+                                                    <input type="text" value={editBookFields.binding} list="rw-format-options"
+                                                        onChange={(e) => setEditBookFields(prev => ({ ...prev, binding: e.target.value }))}
+                                                        onKeyDown={(e) => { e.stopPropagation(); if (e.key === 'Enter' || e.key === 'Escape') e.target.blur(); }}
+                                                        placeholder="Format (blank = unknown)"
+                                                        title="Book format, e.g. Kindle Edition — editable because Amazon sometimes gets it wrong"
+                                                        className="px-3 py-1 rounded-full text-sm border border-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-500 w-44"
+                                                    />
+                                                    <datalist id="rw-format-options">
+                                                        {[...new Set(['Kindle Edition', 'Paperback', 'Hardcover', 'Audible Audiobook', ...books.map(b => b.binding).filter(Boolean)])].sort().map(f => <option key={f} value={f} />)}
+                                                    </datalist>
                                                     {/* v4.17.0.k - View on Amazon button */}
                                                     {(() => {
                                                         const atGoal = modalBook.priceTrigger != null && modalBook.currentPrice != null && modalBook.currentPrice <= modalBook.priceTrigger;
@@ -18597,6 +18635,10 @@
                                                         <div className="px-4 py-2 hover:bg-gray-100 cursor-pointer" role="menuitem"
                                                             onClick={() => openBulkEditModal('position')}>
                                                             Position...
+                                                        </div>
+                                                        <div className="px-4 py-2 hover:bg-gray-100 cursor-pointer" role="menuitem"
+                                                            onClick={() => openBulkEditModal('format')}>
+                                                            Format...
                                                         </div>
                                                         <div className="px-4 py-2 hover:bg-gray-100 cursor-pointer" role="menuitem"
                                                             onClick={async () => {
