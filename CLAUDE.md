@@ -81,8 +81,10 @@ Standard semver with pre-release suffix for test iterations:
 - Update `softwareVersion` in index.html Schema.org structured data to match
 - Update CHANGELOG.md, README.md (and its mirror index.html) sections Recent Features and Coming Soon!
 - Sync "Recent Features" and "Coming Soon" lists between README.md and features.html
+- Re-align "Coming Soon" content with actual TODO priorities (public promises must track the real queue)
 - TODO.md: delete all checked `- [x]` items (now recorded in CHANGELOG) — TODO is future-only
 - After push: "Ready for post-mortem?"
+- After post-mortem: update memory files (lessons → feedback_*, project state → project_*) — post-mortems are the archive; memory is what makes them load-bearing next session
 
 ---
 
