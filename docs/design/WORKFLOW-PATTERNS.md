@@ -67,6 +67,22 @@ _(Historical note: tags were once considered for "next reads" — still perfectl
 
 ---
 
+## Pattern: homing before owning — wishlist books & samples (2026-09-04)
+
+- **Wishlist books get their *future* home immediately** (author/topic folder): the fetcher's
+  wishlist→owned upgrade keeps folder/tags/price goal, so purchase day is zero work — and series folders
+  honestly show ownership gaps. Wishlist *visibility* is a Saved Search (Ownership = Wishlist); never a
+  folder or a hand-maintained list (it's self-maintaining data). A curated **Buy Next** list is the one
+  legit hand-picked overlay.
+- **Samples split by intent**: probably-buying → home like a wishlist book (sample→purchase upgrades in
+  place, same ASIN); genuine audition → stays in the **Inbox** (a pending decision is what the Inbox is
+  for) until the verdict.
+- **Rejected samples**: delete on Amazon → RW orphan-flags it on the next fetch (RW never silently drops) →
+  the periodic **🔍 Orphan filter sweep** finds them; delete → Empty Trash tombstones them for good. The
+  flag does the remembering.
+
+Distilled as prescriptive rules in [../ORGANIZING-RULES.md](../ORGANIZING-RULES.md).
+
 ## Meta
 - **There's no single right way** — these are compositions of the same primitives (folders, Book Lists, tags, saved searches, Auto-Organize). The guide should present them as menus of trade-offs, not mandates.
 - Add new patterns here as they surface, then distill for the USER-GUIDE near launch.
