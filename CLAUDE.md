@@ -129,4 +129,6 @@ When preparing for compaction, include in summary:
 
 **Folders:** `docs/api/`, `docs/design/`, `post-mortems/`
 
+**docs/PRINCIPLES.md** — the distilled laws from all post-mortems (with enforcements). Consult when debugging stalls, before refactors/releases, and when a lesson feels familiar — it probably is. New principles land there same-day via the post-mortem → memory step.
+
 **No version increment:** README, CHANGELOG, TODO, *.md docs, .bat files
