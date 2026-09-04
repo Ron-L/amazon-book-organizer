@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "7.7.0";  // Build version for this file
+        const ORGANIZER_VERSION = "7.7.1-alpha.1";  // Build version for this file
 
         // v6.19.0 - Dev environments talk to the DEV relay worker (isolated KV namespace), so
         // local/dev testing can never touch production relay data. Mirrors the nav-hub's rule,
@@ -11505,16 +11505,33 @@
                                             <div className="text-xs text-gray-500 mt-1 mb-2">
                                                 {alreadyFiled.length === 1 ? 'This book is' : `These ${alreadyFiled.length} books are`} already filed where Auto-Organize would put {alreadyFiled.length === 1 ? 'it' : 'them'}, but still in {sourceName ? `the “${sourceName}” folder` : 'the Inbox'}. Selected ones get removed from {sourceName ? 'this folder' : 'the Inbox'} (they stay filed where they are).
                                             </div>
-                                            {alreadyFiled.map(({ book, folders: homes }) => (
-                                                <div key={book.id} className="flex items-center gap-3 mb-2">
-                                                    {cover(book, alreadyFiled.map(x => x.book))}
-                                                    <div className="flex flex-wrap gap-1.5">
-                                                        {homes.map(f => (
-                                                            <span key={f.id} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-green-50 text-green-700 border border-green-200">✓ {f.name}</span>
-                                                        ))}
+                                            {(() => {
+                                                // v7.7.1-alpha.1 - Group by home-folder signature: one chip header + a wrapping
+                                                // cover row per destination, matching the Will-organize section's language. The
+                                                // old one-row-per-book layout (unchanged since 6.16.0) read fine at the usual
+                                                // 1-4 already-filed books but became a skyscraper the first time it met a full
+                                                // author backlog (25 Heinleins, 2026-09-04). Group order = first appearance.
+                                                const groups = new Map();
+                                                for (const entry of alreadyFiled) {
+                                                    const key = entry.folders.map(f => f.id).sort().join('|');
+                                                    if (!groups.has(key)) groups.set(key, { homes: entry.folders, entries: [] });
+                                                    groups.get(key).entries.push(entry);
+                                                }
+                                                const shelf = alreadyFiled.map(x => x.book);
+                                                return [...groups.entries()].map(([key, { homes, entries }]) => (
+                                                    <div key={key} className="mb-3">
+                                                        <div className="flex flex-wrap items-center gap-1.5 mb-1.5">
+                                                            {homes.map(f => (
+                                                                <span key={f.id} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-green-50 text-green-700 border border-green-200">✓ {f.name}</span>
+                                                            ))}
+                                                            <span className="text-xs text-gray-400">({entries.length})</span>
+                                                        </div>
+                                                        <div className="flex flex-wrap gap-2">
+                                                            {entries.map(({ book }) => cover(book, shelf))}
+                                                        </div>
                                                     </div>
-                                                </div>
-                                            ))}
+                                                ));
+                                            })()}
                                         </div>
                                     )}
                                     {/* Will-organize section — section box = select-all/none of movers; author/shelf boxes appear only where there's a real choice (siblings). */}
