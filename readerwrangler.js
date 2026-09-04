@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "7.6.2";  // Build version for this file
+        const ORGANIZER_VERSION = "7.7.0";  // Build version for this file
 
         // v6.19.0 - Dev environments talk to the DEV relay worker (isolated KV namespace), so
         // local/dev testing can never touch production relay data. Mirrors the nav-hub's rule,
@@ -65,6 +65,11 @@
             koll:            { label: 'KOLL',             badge: 'bg-purple-500' },
             comixology:      { label: 'Comixology',       badge: 'bg-purple-500' },
             insideAmazon:    { label: 'Insider',          badge: 'bg-purple-500' },
+            // v7.7.0-alpha.4 - Both arrived via fetcher newOwnershipType telemetry (2026-09-03);
+            // classified by fetcher v5.2.0. Library loans wear borrow teal; Audible Plus wears
+            // subscription purple (the KU/Prime family).
+            publicLibraryLending: { label: 'Library Loan', badge: 'bg-teal-500' },
+            audiblePlus:     { label: 'Audible Plus',     badge: 'bg-purple-500' },
             unknown:         { label: 'Unknown',          badge: 'bg-gray-500' }
         };
         const getOwnershipType = (book) =>
@@ -699,7 +704,7 @@
             const [tfcSelectedRemoval, setTfcSelectedRemoval] = useState(null); // selected removal group tag label
             const [tfcCheckedRemovals, setTfcCheckedRemovals] = useState(new Set()); // removal group labels checked for removal
             const [tfcUncheckedRemovalBooks, setTfcUncheckedRemovalBooks] = useState({}); // {tagLabel: Set of bookIds to keep}
-            const [editBookFields, setEditBookFields] = useState({ title: '', author: '', series: '', seriesPosition: '', userNote: '', onWishlist: false });
+            const [editBookFields, setEditBookFields] = useState({ title: '', author: '', series: '', seriesPosition: '', userNote: '', onWishlist: false, binding: '' }); // v7.7.0-alpha.13 - Format is user-editable (FORMAT POLICY)
             const [editBookSeriesDropdownOpen, setEditBookSeriesDropdownOpen] = useState(false);
             const editBookSeriesFilterRef = useRef(false); // true = filter by typed text, false = show all
             const editBookSeriesInputRef = useRef(null); // ref to series input for focus management
@@ -1067,6 +1072,9 @@
                 } catch { return null; }
             });
             const dataOpInProgressRef = useRef(false); // v6.3.0 - Guards against overlapping import/restore/delete operations
+            const orgLoadedRef = useRef(false); // v7.7.0-alpha.1 (F1) - Gate for ALL organization persistence: opens only when the load path completed
+            const deviceStateBootBaselineRef = useRef(false); // v7.7.0-alpha.3 - Set at load end, consumed by the device-state effect's first unguarded run: the boot render is a baseline, not a change (each boot was pushing a full identical gen on first blur)
+            const blobSaveFailWarnedRef = useRef(false); // v7.7.0-alpha.1 - One loud toast per session on organization save failure
 
             // v6.9.0 - Single gateway for all relay credential and status changes.
             // Every key change and relay network result goes through here.
@@ -1397,7 +1405,7 @@
                 if (filters.search) parts.push(`"${filters.search}"`);
                 if (filters.readStatus) parts.push(filters.readStatus === 'READ' ? 'Read' : filters.readStatus === 'UNREAD' ? 'Unread' : filters.readStatus);
                 if (filters.tags?.length > 0) parts.push(filters.tags.map(t => tagRegistry[t]?.label || t).join(', '));
-                if (filters.ownership) parts.push(filters.ownership === 'kindleUnlimited' ? 'KU' : filters.ownership === 'insideAmazon' ? 'Insider' : filters.ownership.charAt(0).toUpperCase() + filters.ownership.slice(1));
+                if (filters.ownership) parts.push(filters.ownership === 'kindleUnlimited' ? 'KU' : filters.ownership === 'insideAmazon' ? 'Insider' : filters.ownership === 'publicLibraryLending' ? 'Library Loan' : filters.ownership === 'audiblePlus' ? 'Audible Plus' : filters.ownership.charAt(0).toUpperCase() + filters.ownership.slice(1));
                 if (filters.collections?.length > 0) parts.push(filters.collections.join(', '));
                 if (filters.minAmazonRating) parts.push(`${filters.minAmazonRating}+★`);
                 if (filters.minMyRating) parts.push(`My ${filters.minMyRating === 'unrated' ? 'Unrated' : filters.minMyRating + '+★'}`);
@@ -3620,19 +3628,38 @@
                         // v5.0.0-alpha.169.10 - Mark settings loaded (even if no saved data)
                         explorerSettingsLoadedRef.current = true;
 
-                        // v5.0.0 - Load folders
-                        const savedFolders = localStorage.getItem(FOLDERS_KEY);
-                        let loadedFolders = savedFolders ? JSON.parse(savedFolders) : [];
+                        // v7.7.0-alpha.1 (F1 consolidation) - THE BLOB IS THE SINGLE SOURCE for folders and
+                        // the rest of the organization, read FIRST and UNCONDITIONALLY. The old flow read
+                        // FOLDERS_KEY, then let the blob override only when books loaded — so a cold boot
+                        // with an empty book database silently fell back to the second store (audit F1;
+                        // the same double-store class as the 6.12.0 Book List loss, and the fog that made
+                        // the folder-order scrambler so hard to diagnose). FOLDERS_KEY is now a READ-ONCE
+                        // MIGRATION source (pre-blob installs); its writers are gone; the key itself stays
+                        // in place one release as an inert rollback net.
+                        let orgState = null;
+                        try { orgState = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null'); }
+                        catch (e) { console.warn('⚠️ Organization store unreadable (continuing with fallbacks):', e); }
+                        const org = (orgState && orgState.organization) || null;
 
-                        // v6.12.0-alpha.88 - Book Lists now persist INSIDE the guarded organization blob (with
-                        // folders/searches). This standalone-key read is the ONE-TIME MIGRATION source for installs
-                        // that predate the move: it seeds bookLists, then the blob restore below overrides it once
-                        // the blob actually carries them. (Kept as a read only — the unguarded writer was removed,
-                        // it was stamping [] on mount and permanently erasing all lists on a cold-boot race.)
-                        const savedBookLists = localStorage.getItem(BOOKLISTS_KEY);
-                        const loadedBookLists = savedBookLists ? JSON.parse(savedBookLists) : [];
+                        let loadedFolders = (org && Array.isArray(org.folders) && org.folders.length > 0) ? org.folders : [];
+                        if (loadedFolders.length === 0) {
+                            const savedFolders = localStorage.getItem(FOLDERS_KEY);
+                            loadedFolders = savedFolders ? JSON.parse(savedFolders) : [];
+                            if (loadedFolders.length > 0) console.log('📦 Folders migrated from the legacy standalone key (pre-blob install)');
+                        }
 
-                        // v6.0.0-alpha.53 - Ensure Inbox exists for fresh installs
+                        // v6.12.0-alpha.88 - BOOKLISTS_KEY is the one-time migration source for pre-blob
+                        // installs; the blob wins whenever it carries lists.
+                        let loadedBookLists = [];
+                        if (org && Array.isArray(org.bookLists)) {
+                            loadedBookLists = org.bookLists.map(bl => ({ ...bl, bookIds: bl.bookIds || [] }));
+                        } else {
+                            const savedBookLists = localStorage.getItem(BOOKLISTS_KEY);
+                            loadedBookLists = savedBookLists ? JSON.parse(savedBookLists) : [];
+                        }
+
+                        // v6.0.0-alpha.53 - Ensure Inbox exists for fresh installs (memory only — the
+                        // guarded blob save persists it once the load completes and the gate opens)
                         if (loadedFolders.length === 0) {
                             loadedFolders = [{
                                 id: '__inbox__',
@@ -3643,28 +3670,64 @@
                                 collapsed: false,
                                 isInbox: true
                             }];
-                            localStorage.setItem(FOLDERS_KEY, JSON.stringify(loadedFolders));
                             console.log('📥 Created default Inbox folder for fresh install');
                         }
 
+                        // The rest of the organization applies UNCONDITIONALLY too — org is independent
+                        // of whether the book database came back (the old books-gate was the F1 fog)
+                        if (org) {
+                            setBlankImageBooks(new Set(org.blankImageBooks || []));
+                            setHiddenInstances(new Set(org.hiddenInstances || [])); // v4.16.0.z
+                            setTagRegistry(org.tagRegistry || {}); // v4.27.0
+                            // v6.12.0 - Saved searches (legacy saved-views/pinnedTagFolders intentionally dropped)
+                            let loadedViews = org.savedSearches || [];
+                            if (loadedViews.length > 0 && loadedFolders.length > 0) {
+                                const rootCount = loadedFolders.filter(f => f.parentId === null && f.id !== '__inbox__').length;
+                                const maxFolderDisplayPos = rootCount > 0 ? (rootCount - 1) * 2 : -1;
+                                const maxViewPos = Math.max(...loadedViews.map(v => v.position));
+                                if (maxViewPos <= maxFolderDisplayPos) {
+                                    const offset = maxFolderDisplayPos + 1;
+                                    loadedViews = loadedViews.map(v => ({ ...v, position: v.position + offset }));
+                                }
+                            }
+                            setSavedSearches(loadedViews);
+                            setDataSource(org.dataSource || 'enriched');
+                        } else {
+                            setDataSource('enriched');
+                        }
+                        setLastSyncTime((orgState && orgState.lastSyncTime) || Date.now());
+
                         // Load books from IndexedDB
                         let loadedBooks = await loadBooksFromIndexedDB();
-
-                        // Merge collections data into loaded books
                         if (loadedBooks.length > 0) {
                             loadedBooks = await mergeCollectionsIntoBooks(loadedBooks);
 
-                            // v6.3.0 - Data integrity check (replaces v5.1.0-alpha.8 inline orphan cleanup)
-                            // Checks: ghost refs, duplicate refs, homeless books, corrupted objects
+                            // v7.7.0-alpha.12 (2026-09-04) - FLEET MIGRATION, keep indefinitely (field users
+                            // update on their own schedule): 'Kindle eBook' was never an Amazon value — it was
+                            // RW's import-time DEFAULT for books captured without binding info (format-blind
+                            // era), a standing lie worn by 262 of Ron's books including physical maps and one
+                            // item Amazon calls "Shoes". Blank = honest unknown; real values arrive verbatim
+                            // via the fetcher's scan backfill (v5.3.0) or user edits. Idempotent — the default
+                            // is no longer produced anywhere, so this converges to a no-op.
+                            {
+                                let migrated = 0;
+                                loadedBooks = loadedBooks.map(b => {
+                                    if (b.binding === 'Kindle eBook' && !b.userEdited?.binding) { migrated++; return { ...b, binding: undefined }; }
+                                    return b;
+                                });
+                                if (migrated > 0) console.log(`🏷️ Format migration: cleared the invented 'Kindle eBook' default on ${migrated} book(s) — blank until Amazon or you says otherwise`);
+                            }
+
+                            // v6.3.0 - Data integrity check (ghost refs, duplicates, homeless, corrupted).
+                            // v7.7.0-alpha.1 - No direct localStorage write: the guarded blob save persists
+                            // the corrected folders once setFolders lands.
                             if (loadedFolders.length > 0) {
                                 const integrityResult = runIntegrityCheck(loadedBooks, loadedFolders);
                                 if (integrityResult) {
                                     loadedFolders = integrityResult.correctedFolders;
                                     if (integrityResult.autoFixed.length > 0) {
-                                        localStorage.setItem(FOLDERS_KEY, JSON.stringify(loadedFolders));
                                         const totalFixed = integrityResult.autoFixed.reduce((s, f) => s + (f.books.length || 1), 0);
                                         console.log(`🔧 Integrity auto-fixed on load:`, integrityResult.autoFixed.map(f => f.description));
-                                        // Show toast after render (setTimeout lets setFolders/setBooks settle first)
                                         setTimeout(() => showToast(`Library repair: ${totalFixed} issue${totalFixed !== 1 ? 's' : ''} fixed — see Data Status`), 500);
                                     }
                                     if (integrityResult.needsReview.length > 0) {
@@ -3673,71 +3736,22 @@
                                 }
                             }
 
-                            setFolders(loadedFolders);
-                            setBookLists(loadedBookLists); // v6.12.0
                             setBooks(loadedBooks);
-                            // Update IndexedDB with merged data
                             await saveBooksToIndexedDB(loadedBooks);
 
-                            // v4.13.0: Initialize cover cache
-                            // Build URL map from cache for immediate use
+                            // v4.13.0: cover cache
                             const urlMap = await buildCoverUrlMap(loadedBooks);
                             setCoverUrlMap(urlMap);
-                            // Populate cache in background for uncached images
-                            populateCoverCache(loadedBooks); // Don't await - runs in background
+                            populateCoverCache(loadedBooks); // background
                         }
 
-                        let effectiveLastSync = null;
+                        setFolders(loadedFolders);
+                        setBookLists(loadedBookLists); // v6.12.0
 
-                        if (loadedBooks.length > 0) {
-
-                            // Load organization from localStorage
-                            const saved = localStorage.getItem(STORAGE_KEY);
-                            if (saved) {
-                                const state = JSON.parse(saved);
-                                if (state.organization) {
-                                    setBlankImageBooks(new Set(state.organization.blankImageBooks || []));
-                                    setHiddenInstances(new Set(state.organization.hiddenInstances || [])); // v4.16.0.z
-                                    setTagRegistry(state.organization.tagRegistry || {}); // v4.27.0
-                                    // v6.12.0 - Load saved searches. Legacy saved-views and pinnedTagFolders
-                                    // are intentionally dropped (not migrated) per the Book Lists/Searches redesign.
-                                    const loadedFolders = state.organization.folders || [];
-                                    let loadedViews = state.organization.savedSearches || [];
-                                    // Position migration for interleaved display
-                                    if (loadedViews.length > 0 && loadedFolders.length > 0) {
-                                        const rootCount = loadedFolders.filter(f => f.parentId === null && f.id !== '__inbox__').length;
-                                        const maxFolderDisplayPos = rootCount > 0 ? (rootCount - 1) * 2 : -1;
-                                        const maxViewPos = Math.max(...loadedViews.map(v => v.position));
-                                        if (maxViewPos <= maxFolderDisplayPos) {
-                                            const offset = maxFolderDisplayPos + 1;
-                                            loadedViews.forEach(v => { v.position += offset; });
-                                        }
-                                    }
-                                    setSavedSearches(loadedViews);
-                                    setFolders(loadedFolders); // v5.0.0
-                                    // v6.12.0-alpha.88 - Book Lists now live in the blob (like folders/searches).
-                                    // Override the early BOOKLISTS_KEY migration read ONLY when the blob actually
-                                    // carries them; absent = an install not yet migrated, so the early read stands.
-                                    if (Array.isArray(state.organization.bookLists)) {
-                                        setBookLists(state.organization.bookLists.map(bl => ({ ...bl, bookIds: bl.bookIds || [] })));
-                                    }
-                                    setDataSource(state.organization.dataSource || 'enriched');
-                                    effectiveLastSync = state.lastSyncTime || Date.now();
-                                    setLastSyncTime(effectiveLastSync);
-                                } else {
-                                    // No organization saved
-                                    setDataSource('enriched');
-                                    effectiveLastSync = Date.now();
-                                    setLastSyncTime(effectiveLastSync);
-                                }
-                            } else {
-                                // No saved state
-                                setDataSource('enriched');
-                                effectiveLastSync = Date.now();
-                                setLastSyncTime(effectiveLastSync);
-                            }
-                        }
-
+                        // v7.7.0-alpha.1 (F1) - THE success gate: organization persistence stays closed
+                        // until the load path completed. A failed boot writes nothing, ever.
+                        orgLoadedRef.current = true;
+                        deviceStateBootBaselineRef.current = true; // v7.7.0-alpha.3 - the load's own setState wave is not a change
 
                         // Loading complete - set syncStatus to indicate we're done loading
                         // Actual status display now comes from libraryStatus/collectionsStatus
@@ -3763,31 +3777,37 @@
                 };
             }, []);
 
-            // Auto-save organization
-            // v4.16.0.ab - Guard: Skip save while loading to prevent race condition
+            // Auto-save organization — THE single folder/organization store (F1 consolidation)
+            // v7.7.0-alpha.1 - Explicit load-complete gate replaces the old books.length proxy: a
+            // failed or half-finished boot writes NOTHING (no more mount-stamp erasure class), and an
+            // empty-but-loaded library persists fine (the proxy blocked that, which is why the load
+            // path used to need FOLDERS_KEY as a fallback). Save failures are LOUD now — a silently
+            // stale blob time-travels the library on next boot.
             useEffect(() => {
-                if (syncStatus === 'loading') return;
-                if (books.length > 0) {
-                    try {
-                        const state = {
-                            organization: {
-                                folders,  // v5.0.0 - Book Explorer folders
-                                dataSource,
-                                blankImageBooks: Array.from(blankImageBooks),
-                                hiddenInstances: Array.from(hiddenInstances), // v4.16.0.z
-                                tagRegistry,  // v4.27.0 - Tag registry
-                                savedSearches,  // v6.10.0-alpha.16 - Saved filter views
-                                bookLists: bookLists.map(bl => ({ ...bl, bookIds: bl.bookIds || [] }))  // v6.12.0-alpha.88 - Book Lists now share the guarded blob (single resilient source; retired the fragile standalone key)
-                            },
-                            lastSyncTime: lastSyncTime || Date.now(),
-                            savedAt: Date.now()
-                        };
-                        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-                    } catch (e) {
-                        console.warn('Could not auto-save organization:', e);
+                if (!orgLoadedRef.current) return;
+                try {
+                    const state = {
+                        organization: {
+                            folders,  // v5.0.0 - Book Explorer folders
+                            dataSource,
+                            blankImageBooks: Array.from(blankImageBooks),
+                            hiddenInstances: Array.from(hiddenInstances), // v4.16.0.z
+                            tagRegistry,  // v4.27.0 - Tag registry
+                            savedSearches,  // v6.10.0-alpha.16 - Saved filter views
+                            bookLists: bookLists.map(bl => ({ ...bl, bookIds: bl.bookIds || [] }))  // v6.12.0-alpha.88 - Book Lists share the guarded blob
+                        },
+                        lastSyncTime: lastSyncTime || Date.now(),
+                        savedAt: Date.now()
+                    };
+                    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+                } catch (e) {
+                    console.error('❌ Could not save organization:', e);
+                    if (!blobSaveFailWarnedRef.current) {
+                        blobSaveFailWarnedRef.current = true;
+                        showToast('⚠️ Your library organization could not be saved — browser storage may be full');
                     }
                 }
-            }, [syncStatus, folders, blankImageBooks, dataSource, lastSyncTime, hiddenInstances, tagRegistry, savedSearches, bookLists]);
+            }, [folders, blankImageBooks, dataSource, lastSyncTime, hiddenInstances, tagRegistry, savedSearches, bookLists]);
 
             // v6.0.0 Phase 2 - Debounced device-state push to relay for cross-device sync.
             // v6.12.0-alpha.58 - Debounce raised 15s → 60s AND flush-on-leave (blur / tab hidden / pagehide).
@@ -3801,6 +3821,14 @@
                 // restore's own setStates — its push already carried them. Changes after the window
                 // mark pending normally.
                 if (Date.now() < deviceStateSettleUntilRef.current) return;
+                // v7.7.0-alpha.3 - Boot baseline: the load's final setState batch fires this effect
+                // once with everything "changed" — but nothing happened. Consuming the flag here
+                // (instead of marking pending) stops the boot-echo leak: every tab open was arming
+                // a full identical push, flushed on first blur (~20 KV writes / ~17MB per tab open —
+                // seen live 2026-09-02, gens 10:36:54 and 17:27:33; likely a big slice of the
+                // "writes still a bit high" residue). It also mis-armed the close-nag on boots
+                // where nothing changed.
+                if (deviceStateBootBaselineRef.current) { deviceStateBootBaselineRef.current = false; return; }
 
                 // A real change occurred → mark pending + show unsynced.
                 deviceStatePendingRef.current = true;
@@ -3855,8 +3883,7 @@
                 const result = runIntegrityCheck(books, folders);
                 if (!result) return;
                 if (result.autoFixed.length > 0) {
-                    setFolders(result.correctedFolders);
-                    localStorage.setItem(FOLDERS_KEY, JSON.stringify(result.correctedFolders));
+                    setFolders(result.correctedFolders); // guarded blob save persists this (F1)
                     const totalFixed = result.autoFixed.reduce((s, f) => s + (f.books.length || 1), 0);
                     showToast(`Library repair: ${totalFixed} issue${totalFixed !== 1 ? 's' : ''} fixed — see Data Status`);
                     console.log(`🔧 Integrity auto-fixed:`, result.autoFixed.map(f => f.description));
@@ -4010,6 +4037,8 @@
 
             // Save libraryStatus and collectionsStatus to localStorage (v3.7.0.n)
             useEffect(() => {
+                // v7.7.0-alpha.1 (F1) - Load gate: don't stamp defaults over the saved statuses on mount
+                if (!orgLoadedRef.current) return;
                 const statusData = { libraryStatus, collectionsStatus };
                 localStorage.setItem(STATUS_KEY, JSON.stringify(statusData));
             }, [libraryStatus, collectionsStatus]);
@@ -4050,18 +4079,11 @@
                 localStorage.setItem(EXPLORER_KEY, JSON.stringify(explorerData));
             }, [selectedFolderId, explorerView, explorerSort, explorerCoverCols, leftPaneWidth, folderSortSettings, folderListSort, visibleColumns, columnWidths, columnOrder, explorerGroupOn, viewsSectionCollapsed, bookListsSectionCollapsed, foldersSectionCollapsed]);
 
-            // v5.0.0 - Save folders to localStorage
-            useEffect(() => {
-                localStorage.setItem(FOLDERS_KEY, JSON.stringify(folders));
-            }, [folders]);
-
-            // v6.12.0-alpha.88 - Book Lists are persisted via the GUARDED organization blob above (alongside
-            // folders/searches), NOT a standalone key. The old unguarded BOOKLISTS_KEY save-effect wrote [] on
-            // mount — before the async load populated state — and on a cold boot where IndexedDB returned no
-            // books the restore was skipped, so that [] stuck: every Book List erased with no fallback (folders
-            // survived only because they were ALSO in the blob). The blob's syncStatus/books guard prevents any
-            // pre-load write, and the blob is a resilient second source. BOOKLISTS_KEY is now read-once on load
-            // as a one-time migration source (see the load effect); its writer is intentionally gone.
+            // v7.7.0-alpha.1 (F1 consolidation) - FOLDERS_KEY and BOOKLISTS_KEY writers are GONE. Both
+            // now persist ONLY via the gated organization blob above; the standalone keys are read-once
+            // migration sources on load (pre-blob installs) and will be removed entirely next release.
+            // FOLDERS_KEY's writer was the last unguarded mount-stamper of the Book-List-killer class —
+            // and the double store was the fog behind the folder-order scrambler diagnosis.
 
             // v5.0.0-alpha.175.2 - Close menus on outside click, close dialogs on ESC
             // v5.0.0-alpha.175.4 - Extended to close filter dropdowns
@@ -4884,7 +4906,7 @@
 
                 const makeHref = (env, baseUrl, cacheBust) => {
                     const cb = cacheBust ? `?v='+Date.now()+'` : '';
-                    return `javascript:(function(){window._READERWRANGLER_TARGET_ENV='${env}';${creds}var s=document.createElement('script');s.src='${baseUrl}bookmarklet-nav-hub.js${cb}';s.onerror=function(){var d=document.createElement('div');d.style.cssText='position:fixed;top:10px;right:10px;z-index:999999;background:#fff;border-top:4px solid #dc2626;padding:16px 20px;border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,.2);max-width:320px;font-family:sans-serif;font-size:14px';var h=document.createElement('div');h.style.cssText='color:#dc2626;font-weight:bold;margin-bottom:6px';h.textContent='ReaderWrangler failed to load';var p=document.createElement('div');p.style.color='#374151';p.textContent='Could not reach the server. Check your connection and try again.';var b=document.createElement('button');b.textContent='Close';b.style.cssText='display:block;margin-top:10px;padding:4px 14px;background:#4f46e5;color:white;border:none;border-radius:4px;cursor:pointer;font-size:13px';b.onclick=function(){d.remove()};d.appendChild(h);d.appendChild(p);d.appendChild(b);document.body.appendChild(d)};document.body.appendChild(s);})();`;
+                    return `javascript:(function(){window._READERWRANGLER_TARGET_ENV='${env}';${creds}var s=document.createElement('script');s.src='${baseUrl}bookmarklet-nav-hub.js${cb}';s.onerror=function(){var d=document.createElement('div');d.style.cssText='position:fixed;top:10px;right:10px;z-index:999999;background:#fff;border-top:4px solid #dc2626;padding:16px 20px;border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,.2);max-width:320px;font-family:sans-serif;font-size:14px';var h=document.createElement('div');h.style.cssText='color:#dc2626;font-weight:bold;margin-bottom:6px';h.textContent='ReaderWrangler could not load here';var p=document.createElement('div');p.style.color='#374151';p.textContent='Some sites block bookmarklets — try again from a different tab. If it happens everywhere, check your connection.';var b=document.createElement('button');b.textContent='Close';b.style.cssText='display:block;margin-top:10px;padding:4px 14px;background:#4f46e5;color:white;border:none;border-radius:4px;cursor:pointer;font-size:13px';b.onclick=function(){d.remove()};d.appendChild(h);d.appendChild(p);d.appendChild(b);document.body.appendChild(d)};document.body.appendChild(s);})();`;
                 };
 
                 const bookmarklets = [];
@@ -5757,7 +5779,11 @@
                             ratingCount: item.reviewCount || '',
                             description: item.description || '',
                             topReviews: item.topReviews || [],
-                            binding: item.binding || (normalized.onWishlist ? undefined : 'Kindle eBook'), // v6.12.0 - don't claim "Kindle" for unknown-format wishlist books
+                            // v7.7.0-alpha.12 (FORMAT POLICY, 2026-09-04) - blank means unknown; the old 'Kindle eBook'
+                            // default was an invented claim. alpha.15: the token is also FILTERED on the way in —
+                            // backup/restore round trips seeded it into the relay canonical, and without this filter
+                            // every import resurrected it (blocking the fetcher's verbatim backfill forever).
+                            binding: (item.binding === 'Kindle eBook' ? undefined : item.binding) || undefined,
                             coverUrl: item.coverUrl,
                             publicationDate: item.publicationDate || '',
                             hasEnrichedData: true,
@@ -5783,6 +5809,11 @@
                             userNote: item.note,
                             myRating: item.myRating || 0,  // v5.0.0-alpha.175.31 - Personal rating
                             userEdited: item.userEdited || undefined,  // v5.4.7 - Restore user-edited flags
+                            // v7.7.0-alpha.11 - Orphan flags from the scan's follow-up run. The allow-list
+                            // strip class again: the fetcher marked them since v5.0.0, this mapping discarded
+                            // them, and the 🔍 Orphan filter (here AND mobile) showed 0 forever.
+                            orphanStatus: item.orphanStatus || null,
+                            orphanCheckedDate: item.orphanCheckedDate || null,
                             // v6.0.0-alpha.48 - Trash Bin state (preserved for backup restore)
                             isDeleted: item.isDeleted || false,
                             deletedAt: item.deletedAt || null,
@@ -5819,7 +5850,7 @@
                             ratingCount: amazonData?.customerReviewsSummary?.count?.displayString || '',
                             description: extractDescription(amazonData?.description),
                             topReviews: amazonData?.customerReviewsTop?.reviews || [],
-                            binding: amazonData?.bindingInformation?.binding?.displayString || (normalized.onWishlist ? undefined : 'Kindle eBook'), // v6.12.0 - real format if known; never falsely "Kindle" for wishlist
+                            binding: amazonData?.bindingInformation?.binding?.displayString || undefined, // v7.7.0-alpha.12 (FORMAT POLICY) - blank means unknown, never an invented default
                             coverUrl: coverUrl,
                             publicationDate: '', // Legacy format doesn't have publication date
                             hasEnrichedData: true,
@@ -5843,7 +5874,9 @@
                             // v5.0.0-alpha.175.28 - User metadata (tags, notes)
                             tags: item.tags,
                             userNote: item.note,
-                            myRating: item.myRating || 0  // v5.0.0-alpha.175.31 - Personal rating
+                            myRating: item.myRating || 0,  // v5.0.0-alpha.175.31 - Personal rating
+                            orphanStatus: item.orphanStatus || null, // v7.7.0-alpha.11 - see new-format branch
+                            orphanCheckedDate: item.orphanCheckedDate || null
                         };
                     }
                 });
@@ -6029,8 +6062,7 @@
                     if (Array.isArray(orgToRestore.bookLists)) {
                         // v6.12.0 - Deny-list spread: keep every field the source carries (mirrors serialization)
                         const restoredBookLists = orgToRestore.bookLists.map(bl => ({ ...bl, bookIds: bl.bookIds || [] }));
-                        setBookLists(restoredBookLists);
-                        localStorage.setItem(BOOKLISTS_KEY, JSON.stringify(restoredBookLists));
+                        setBookLists(restoredBookLists); // guarded blob save persists this (F1)
                         pushOrgOverride.bookLists = restoredBookLists; // v7.6.0-alpha.19
                     }
 
@@ -6057,8 +6089,7 @@
                             console.log(`🔧 Integrity auto-fixed during restore:`, integrityResult.autoFixed.map(f => f.description));
                         }
 
-                        setFolders(finalFolders);
-                        localStorage.setItem(FOLDERS_KEY, JSON.stringify(finalFolders));
+                        setFolders(finalFolders); // guarded blob save persists this (F1)
                         pushOrgOverride.folders = finalFolders; // v7.6.0-alpha.19 - the integrity-checked applied set
                         console.log(`✅ Restored ${restoredFolders.length} folders from ${orgSource}`);
                     } else {
@@ -6127,6 +6158,14 @@
                             // arms the debounced push ~60s later with IDENTICAL content — a redundant ~17MB
                             // generation, and the phone banners "6:01 newer than 6:01" against its own sync.
                             deviceStateSettleUntilRef.current = Date.now() + 5000;
+                            // v7.7.0-alpha.2 - The settle window only covers renders AFTER this line — but
+                            // the multi-minute chunk upload above lets the restore's setState wave render
+                            // DURING the await, marking pending before the window exists. This push just
+                            // carried everything there is to carry: clear the flag and mark synced, exactly
+                            // as pushNow's success path does (else the next blur flushes an identical ~17MB
+                            // echo generation — seen live 2026-09-02, gen minted 10:59:59).
+                            deviceStatePendingRef.current = false;
+                            await relayOp('pushOk');
                         } catch (err) {
                             console.warn('⚠️ Backup restored locally but relay sync failed:', err.message);
                         }
@@ -6217,7 +6256,7 @@
                 setModalBook(null);
                 setModalNavOverride(null);
                 setIsEditingBook(false);
-                setEditBookFields({ title: '', author: '', series: '', seriesPosition: '', userNote: '', onWishlist: false });
+                setEditBookFields({ title: '', author: '', series: '', seriesPosition: '', userNote: '', onWishlist: false, binding: '' });
                 setEditBookSeriesDropdownOpen(false);
                 setShareDropdownOpen(false);
                 setContextSubmenu(null);
@@ -6232,7 +6271,8 @@
                     series: modalBook.series || '',
                     seriesPosition: modalBook.seriesPosition != null ? String(modalBook.seriesPosition) : '',
                     userNote: modalBook.userNote || '',
-                    onWishlist: modalBook.onWishlist || false
+                    onWishlist: modalBook.onWishlist || false,
+                    binding: modalBook.binding || '' // v7.7.0-alpha.13
                 });
                 setEditBookSeriesDropdownOpen(false);
                 setIsEditingBook(true);
@@ -6240,7 +6280,7 @@
 
             const cancelEditMode = () => {
                 setIsEditingBook(false);
-                setEditBookFields({ title: '', author: '', series: '', seriesPosition: '', userNote: '', onWishlist: false });
+                setEditBookFields({ title: '', author: '', series: '', seriesPosition: '', userNote: '', onWishlist: false, binding: '' });
                 setEditBookSeriesDropdownOpen(false);
             };
 
@@ -6274,6 +6314,14 @@
                 if (newNote !== oldNote) {
                     previousValues.userNote = oldNote;
                     newValues.userNote = newNote;
+                }
+                // v7.7.0-alpha.13 (FORMAT POLICY) - Format is user-editable; blank = honest unknown.
+                // Lands in userEdited.binding via editedFields below → wins over every future fetch.
+                const newBinding = editBookFields.binding.trim() || undefined;
+                const oldBinding = modalBook.binding || undefined;
+                if (newBinding !== oldBinding) {
+                    previousValues.binding = oldBinding;
+                    newValues.binding = newBinding;
                 }
                 // v5.4.8 - Ownership toggle
                 if (editBookFields.onWishlist !== (modalBook.onWishlist || false)) {
@@ -6327,7 +6375,7 @@
             const openBulkEditModal = (field) => {
                 const selectedBookIds = getSelectedBookIds();
                 const selectedBooks = selectedBookIds.map(id => books.find(b => b.id === id)).filter(Boolean);
-                const fieldKey = field === 'position' ? 'seriesPosition' : (field === 'ownership' ? 'onWishlist' : field);
+                const fieldKey = field === 'position' ? 'seriesPosition' : (field === 'ownership' ? 'onWishlist' : (field === 'format' ? 'binding' : field)); // v7.7.0-alpha.13 - format
                 const values = new Set(selectedBooks.map(b => {
                     const val = b[fieldKey];
                     return val != null ? String(val) : '';
@@ -6345,7 +6393,7 @@
 
             const saveBulkEdit = () => {
                 if (!bulkEditField || bulkEditBookIds.length === 0) return;
-                const fieldKey = bulkEditField === 'position' ? 'seriesPosition' : (bulkEditField === 'ownership' ? 'onWishlist' : bulkEditField);
+                const fieldKey = bulkEditField === 'position' ? 'seriesPosition' : (bulkEditField === 'ownership' ? 'onWishlist' : (bulkEditField === 'format' ? 'binding' : bulkEditField)); // v7.7.0-alpha.13
                 let newValue;
                 if (bulkEditField === 'position') {
                     newValue = bulkEditInput.trim() ? parseFloat(bulkEditInput) : null;
@@ -6378,7 +6426,7 @@
                     saveBooksToIndexedDB(updated);
                     return updated;
                 });
-                const fieldLabel = bulkEditField === 'position' ? 'position' : (bulkEditField === 'ownership' ? 'ownership' : bulkEditField);
+                const fieldLabel = bulkEditField === 'position' ? 'position' : (bulkEditField === 'ownership' ? 'ownership' : (bulkEditField === 'format' ? 'format' : bulkEditField));
                 const count = bulkEditBookIds.length;
                 recordAction({
                     type: 'BULK_EDIT_BOOKS',
@@ -6865,14 +6913,18 @@
                                     });
                                 } else if (subAction.type === 'REMOVE_BOOKS_FROM_FOLDER') {
                                     // Restore books to folder (undo removal, e.g., restore to Inbox)
+                                    // v7.7.0-alpha.4 - at their ORIGINAL positions (stampRemovalIndices captured
+                                    // them at plan time); missing/-1 index appends, matching the old behavior
                                     updated = updated.map(folder => {
                                         if (folder.id === subAction.folderId) {
                                             const existingIds = new Set(folder.bookIds);
-                                            const booksToRestore = subAction.bookIds.filter(id => !existingIds.has(id));
-                                            return {
-                                                ...folder,
-                                                bookIds: [...folder.bookIds, ...booksToRestore]
-                                            };
+                                            const bookIds = [...folder.bookIds];
+                                            subAction.bookIds.forEach((id, i) => {
+                                                if (existingIds.has(id)) return;
+                                                const idx = subAction.fromIndices?.[i];
+                                                bookIds.splice((idx != null && idx >= 0 && idx <= bookIds.length) ? idx : bookIds.length, 0, id);
+                                            });
+                                            return { ...folder, bookIds };
                                         }
                                         return folder;
                                     });
@@ -7695,6 +7747,24 @@
                 };
             };
 
+            // v7.7.0-alpha.4 - Stamp REMOVE_BOOKS_FROM_FOLDER sub-actions with each book's index in the
+            // PRE-plan source folder so undo restores positions instead of appending (an undone
+            // Auto-Organize was landing the book at the BOTTOM of a 50+ Inbox, hidden below the
+            // Show-All fold — the same fromIndices idea MOVE_ITEMS and REMOVE_BOOKS_FOLDER already
+            // use). Pairs sort ascending so sequential splice on undo reconstructs the original
+            // order; a book not found (-1, defensive) sorts last and appends.
+            const stampRemovalIndices = (subActions, preFolders) => {
+                for (const sa of subActions) {
+                    if (sa.type !== 'REMOVE_BOOKS_FROM_FOLDER') continue;
+                    const srcIds = (preFolders.find(f => f.id === sa.folderId)?.bookIds) || [];
+                    const pairs = sa.bookIds.map(id => [id, srcIds.indexOf(id)])
+                        .sort((a, b) => (a[1] < 0 ? 1e9 : a[1]) - (b[1] < 0 ? 1e9 : b[1]));
+                    sa.bookIds = pairs.map(p => p[0]);
+                    sa.fromIndices = pairs.map(p => p[1]);
+                }
+                return subActions;
+            };
+
             // v5.1.0-alpha.29c - Phase 3.3: Extract organize logic to eliminate ~250 lines of duplication
             // v6.13.0-alpha.4 - Shared apply step for BOTH the wizard and the right-click Auto-Organize: compute
             // the plan SYNCHRONOUSLY from current folders, apply it, and record ONE undo. (Computing inside the
@@ -7709,7 +7779,7 @@
                     recordAction({
                         type: 'WIZARD_ORGANIZE',
                         description: `${label} (${plan.totalBooksOrganized} book${plan.totalBooksOrganized !== 1 ? 's' : ''})`,
-                        subActions: plan.subActions
+                        subActions: stampRemovalIndices(plan.subActions, folders) // v7.7.0-alpha.4 - positional undo
                     });
                 }
                 return plan;
@@ -7994,7 +8064,7 @@
                     // v7.6.0-alpha.11 (wave C) - Place engine-created folders (same as applyOrganizePlan)
                     const createdIds = new Set(subActions.filter(a => a.type === 'CREATE_FOLDER').map(a => a.folderId));
                     setFolders(placeNewFoldersAtTop(newFolders, newFolders.filter(f => createdIds.has(f.id))));
-                    recordAction({ type: 'WIZARD_ORGANIZE', description: `${label} + removed ${selectedFiledIds.length} already-filed from ${where}`, subActions });
+                    recordAction({ type: 'WIZARD_ORGANIZE', description: `${label} + removed ${selectedFiledIds.length} already-filed from ${where}`, subActions: stampRemovalIndices(subActions, folders) }); // v7.7.0-alpha.4 - positional undo
                     showToast(`Organized ${plan.totalBooksOrganized} book${plan.totalBooksOrganized !== 1 ? 's' : ''} and removed ${selectedFiledIds.length} from ${where}`);
                 } else if (willOrganize) {
                     const plan = applyOrganizePlan(moverGroupsToApply, applyOpts, label);
@@ -8533,12 +8603,52 @@
                     {books.length === 0 && syncStatus !== 'loading' ? (
                         <div className="flex-1 min-h-0 flex items-center justify-center" style={{ background: 'var(--bg-base)' }}>
                             <div style={{ textAlign: 'center', maxWidth: '480px', padding: '40px 20px' }}>
-                                <div style={{ fontSize: '64px', marginBottom: '20px' }}>📚</div>
+                                {/* v7.7.0-alpha.9 - The actual logo, not the generic 📚 emoji (Ron: "common and lame given we have a logo") */}
+                                <img src="icons/logo-transparent.png" alt="ReaderWrangler" style={{ width: '80px', height: 'auto', display: 'block', margin: '0 auto 20px' }} />
                                 <h2 style={{ fontSize: '26px', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '10px' }}>Welcome to ReaderWrangler</h2>
                                 <p style={{ fontSize: '15px', color: 'var(--text-secondary)', marginBottom: '16px' }}>Organize your Kindle library your way.</p>
+                                {/* v7.7.0-alpha.6/8 - Empty book database but organization present (cleared browser
+                                    data, evicted IndexedDB, new machine): the screen was indistinguishable from a
+                                    fresh install and read as total data loss — proven live in the F1 empty-DB test.
+                                    alpha.8 (Ron's A/B/C): recovery options BEST-FIRST replace the fresh-install
+                                    tutorial — Import from Relay beats backup (which also rolls the org back) beats
+                                    fetching, and C ends by doing A. */}
+                                {(folders.some(f => !f.isInbox && f.id !== '__inbox__') || bookLists.length > 0 || savedSearches.length > 0) ? (<>
+                                    <p style={{ fontSize: '14px', color: 'var(--text-primary)', background: 'var(--bg-hover)', borderRadius: '8px', padding: '10px 14px', marginBottom: '16px' }}>
+                                        ✅ Your folders and lists are intact — bring your books back and everything falls into place.
+                                    </p>
+                                    <div style={{ textAlign: 'left', marginBottom: '16px', fontSize: '13px', color: 'var(--text-secondary)', lineHeight: '1.7' }}>
+                                        <div style={{ fontWeight: 600, color: 'var(--text-primary)', marginBottom: '6px' }}>Try these in order:</div>
+                                        {/* v7.7.0-alpha.9 - Explicit decimal markers (the global reset strips list
+                                            styles — alpha.8's <ol> rendered as run-together paragraphs) + the full
+                                            bookmarklet sub-steps restored under option 3 */}
+                                        <ol style={{ paddingLeft: '22px', margin: 0, listStyleType: 'decimal' }}>
+                                            <li style={{ marginBottom: '8px' }}>
+                                                <strong>Import from Relay</strong> — File › Import from Relay.<br/>
+                                                <span style={{ color: 'var(--text-muted)' }}>Your library is most likely still in the cloud; this is the fastest path.</span>
+                                            </li>
+                                            <li style={{ marginBottom: '8px' }}>
+                                                <strong>Restore your last backup</strong> — File › Restore Backup… — if relay data is missing or expired.<br/>
+                                                <span style={{ color: 'var(--text-muted)' }}>Also returns your folders and lists to the backup's copy.</span>
+                                            </li>
+                                            <li>
+                                                <strong>Fetch fresh from Amazon</strong> — if you have no backup, or it's too old for your liking:
+                                                <ul style={{ paddingLeft: '18px', listStyleType: 'circle', marginTop: '2px', marginBottom: 0 }}>
+                                                    <li>Click the bookmarklet and select "Go to Amazon Library Page"</li>
+                                                    <li>Click the bookmarklet again and select "Download Library"</li>
+                                                    <li>Repeat for Collections ("Go to Amazon Collections Page", then "Download Collections")</li>
+                                                    <li>Then do step 1 — it will work now</li>
+                                                </ul>
+                                            </li>
+                                        </ol>
+                                    </div>
+                                </>) : (
                                 <div style={{ textAlign: 'left', marginBottom: '16px' }}>
-                                    {/* Set up Relay — clickable bullet that opens Relay Setup */}
-                                    <button
+                                    {/* Set up Relay — clickable bullet that opens Relay Setup.
+                                        v7.7.0-alpha.7 - Hidden once relay IS configured (the intact-org /
+                                        returning-user case): telling a set-up user to set up reads as noise
+                                        and undermines the "your data is fine" banner above. */}
+                                    {!(window.RWRelay && window.RWRelay.isConfigured()) && <button
                                         onClick={() => { setRelaySetupOpen(true); setRelaySetupSection(null); }}
                                         title="Also available from File › Relay Setup"
                                         style={{
@@ -8556,7 +8666,7 @@
                                             <li>Install the bookmarklet that navigates to those pages</li>
                                             <li>Optionally pair with your phone</li>
                                         </ul>
-                                    </button>
+                                    </button>}
                                     {/* Remaining steps */}
                                     <ul style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: '1.8', paddingLeft: '20px', listStyleType: 'disc', margin: '0' }}>
                                         <li>Fetch your books and collections from Amazon:
@@ -8573,6 +8683,7 @@
                                         <li><span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Repeat occasionally to add newly purchased books.</span></li>
                                     </ul>
                                 </div>
+                                )}
                             </div>
                         </div>
                     ) : (<>
@@ -8868,7 +8979,9 @@
                                             'kindleUnlimited': 'Kindle Unlimited',
                                             'koll': 'KOLL',
                                             'comixology': 'Comixology',
-                                            'insideAmazon': 'Amazon Insider'
+                                            'insideAmazon': 'Amazon Insider',
+                                            'publicLibraryLending': 'Library Loan',
+                                            'audiblePlus': 'Audible Plus'
                                         };
                                         return labels[ownershipFilter] || ownershipFilter;
                                     })()
@@ -8910,6 +9023,8 @@
                                         { value: 'koll', label: 'KOLL' },
                                         { value: 'comixology', label: 'Comixology' },
                                         { value: 'insideAmazon', label: 'Amazon Insider' },
+                                        { value: 'publicLibraryLending', label: 'Library Loan' },
+                                        { value: 'audiblePlus', label: 'Audible Plus' },
                                         { value: 'orphan', label: '🔍 Orphan (removed from Amazon)' }
                                     ].map(type => (
                                         <div
@@ -9619,7 +9734,7 @@
                                 {collectionFilter && (ratingFilter || seriesFilter || datePreset || tagFilter?.length > 0 || selectedCollections.length > 0) && <span>|</span>}
                                 {ratingFilter && <span>Rating: {ratingFilter}+★</span>}
                                 {ratingFilter && (ownershipFilter || seriesFilter || datePreset || tagFilter?.length > 0 || selectedCollections.length > 0) && <span>|</span>}
-                                {ownershipFilter && <span>Ownership: {ownershipFilter === 'kindleUnlimited' ? 'Kindle Unlimited' : ownershipFilter === 'insideAmazon' ? 'Amazon Insider' : ownershipFilter === 'purchased' ? 'Owned' : ownershipFilter.charAt(0).toUpperCase() + ownershipFilter.slice(1)}</span>}
+                                {ownershipFilter && <span>Ownership: {ownershipFilter === 'kindleUnlimited' ? 'Kindle Unlimited' : ownershipFilter === 'insideAmazon' ? 'Amazon Insider' : ownershipFilter === 'purchased' ? 'Owned' : ownershipFilter === 'publicLibraryLending' ? 'Library Loan' : ownershipFilter === 'audiblePlus' ? 'Audible Plus' : ownershipFilter.charAt(0).toUpperCase() + ownershipFilter.slice(1)}</span>}
                                 {ownershipFilter && (seriesFilter || datePreset || tagFilter?.length > 0 || selectedCollections.length > 0) && <span>|</span>}
                                 {seriesFilter && <span>Series: {seriesFilter === 'NOT_IN_SERIES' ? 'Not in Series' : seriesFilter}</span>}
                                 {seriesFilter && (datePreset || tagFilter?.length > 0 || selectedCollections.length > 0) && <span>|</span>}
@@ -12110,6 +12225,7 @@
                             author:    { title: 'Edit Author',    fieldKey: 'author' },
                             series:    { title: 'Edit Series',    fieldKey: 'series' },
                             position:  { title: 'Edit Position',  fieldKey: 'seriesPosition' },
+                            format:    { title: 'Edit Format',    fieldKey: 'binding' }, // v7.7.0-alpha.13 - FORMAT POLICY
                             ownership: { title: 'Owned / Wishlist', fieldKey: 'onWishlist' }
                         };
                         const config = fieldConfig[bulkEditField];
@@ -12203,6 +12319,22 @@
                                                 placeholder={placeholder || 'e.g., 1, 1.5'}
                                                 className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                                 autoFocus />
+                                        )}
+                                        {bulkEditField === 'format' && (
+                                            /* v7.7.0-alpha.13 - FORMAT POLICY: free text + suggestions from the library's own
+                                               vocabulary (never a hardcoded dropdown — formats are an unbounded folksonomy).
+                                               Typical use: sort All Books by Format, select the blanks, set "Kindle Edition". */
+                                            <>
+                                                <input type="text" value={bulkEditInput} list="rw-format-options"
+                                                    onChange={(e) => setBulkEditInput(e.target.value)}
+                                                    onKeyDown={(e) => { if (e.key !== 'Escape') e.stopPropagation(); }}
+                                                    placeholder={placeholder || 'e.g., Kindle Edition (blank = unknown)'}
+                                                    className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                                    autoFocus />
+                                                <datalist id="rw-format-options">
+                                                    {[...new Set(['Kindle Edition', 'Paperback', 'Hardcover', 'Audible Audiobook', ...books.map(b => b.binding).filter(Boolean)])].sort().map(f => <option key={f} value={f} />)}
+                                                </datalist>
+                                            </>
                                         )}
                                         {bulkEditField === 'ownership' && (
                                             <div className="flex gap-2">
@@ -12496,6 +12628,18 @@
                                                         <option value="purchased">Owned</option>
                                                         <option value="wishlist">Wishlist Item</option>
                                                     </select>
+                                                    {/* v7.7.0-alpha.13 - FORMAT POLICY: user-editable Format (fixes "Shoes",
+                                                        fills blanks); suggestions from the library's own vocabulary */}
+                                                    <input type="text" value={editBookFields.binding} list="rw-format-options"
+                                                        onChange={(e) => setEditBookFields(prev => ({ ...prev, binding: e.target.value }))}
+                                                        onKeyDown={(e) => { e.stopPropagation(); if (e.key === 'Enter' || e.key === 'Escape') e.target.blur(); }}
+                                                        placeholder="Format (blank = unknown)"
+                                                        title="Book format, e.g. Kindle Edition — editable because Amazon sometimes gets it wrong"
+                                                        className="px-3 py-1 rounded-full text-sm border border-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-500 w-44"
+                                                    />
+                                                    <datalist id="rw-format-options">
+                                                        {[...new Set(['Kindle Edition', 'Paperback', 'Hardcover', 'Audible Audiobook', ...books.map(b => b.binding).filter(Boolean)])].sort().map(f => <option key={f} value={f} />)}
+                                                    </datalist>
                                                     {/* v4.17.0.k - View on Amazon button */}
                                                     {(() => {
                                                         const atGoal = modalBook.priceTrigger != null && modalBook.currentPrice != null && modalBook.currentPrice <= modalBook.priceTrigger;
@@ -16549,6 +16693,8 @@
                                                                     koll: { bg: 'bg-purple-500', text: 'KOLL' },
                                                                     comixology: { bg: 'bg-purple-500', text: 'COMIX' },
                                                                     insideAmazon: { bg: 'bg-purple-500', text: 'INSIDER' },
+                                                                    publicLibraryLending: { bg: 'bg-teal-500', text: 'LIBRARY' },
+                                                                    audiblePlus: { bg: 'bg-purple-500', text: 'AUDIBLE+' },
                                                                     unknown: { bg: 'bg-gray-500', text: '?' }
                                                                 };
                                                                 const config = badgeConfig[book.ownershipType];
@@ -18449,7 +18595,8 @@
                                                         series: book.series || '',
                                                         seriesPosition: book.seriesPosition != null ? String(book.seriesPosition) : '',
                                                         userNote: book.userNote || '',
-                                                        onWishlist: book.onWishlist || false
+                                                        onWishlist: book.onWishlist || false,
+                                                        binding: book.binding || '' // v7.7.0-alpha.14 - this inline duplicate of enterEditMode missed alpha.13's new field: saving threw at binding.trim() (silent edit failure)
                                                     });
                                                     setIsEditingBook(true);
                                                     setExplorerBookContextMenu(null);
@@ -18493,6 +18640,10 @@
                                                         <div className="px-4 py-2 hover:bg-gray-100 cursor-pointer" role="menuitem"
                                                             onClick={() => openBulkEditModal('position')}>
                                                             Position...
+                                                        </div>
+                                                        <div className="px-4 py-2 hover:bg-gray-100 cursor-pointer" role="menuitem"
+                                                            onClick={() => openBulkEditModal('format')}>
+                                                            Format...
                                                         </div>
                                                         <div className="px-4 py-2 hover:bg-gray-100 cursor-pointer" role="menuitem"
                                                             onClick={async () => {

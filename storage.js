@@ -170,6 +170,11 @@ const saveBooksToIndexedDB = async (books, preserveUserData = false) => {
                         tags: book.tags ?? previousBook.tags,
                         note: book.note ?? previousBook.note,
                         isHidden: ue.isHidden ? previousBook.isHidden : book.isHidden,  // v6.12.0 - F4: was a phantom `hidden` field (real field is isHidden). isHidden is user-owned → defer to local edit, else take incoming.
+                        // v7.7.0-alpha.12 (2026-09-04, FORMAT POLICY) - Format is user-editable: an edited
+                        // binding wins over every fetch, forever; otherwise take the incoming verbatim value,
+                        // but never let an incoming BLANK erase a known binding (a lean run without
+                        // bindingInformation must not undo the scan's backfill).
+                        binding: ue.binding ? previousBook.binding : (book.binding ?? previousBook.binding),
                         myRating: book.myRating ?? previousBook.myRating,  // v5.0.0-alpha.175.31 - Personal rating
                         userEdited: { ...(book.userEdited || {}), ...ue },  // v6.12.0 - union: inherit other-device flags, keep local
                         // v6.0.0-alpha.48 - Preserve Trash state (user-initiated, survives relay imports)

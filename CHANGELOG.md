@@ -5,6 +5,34 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [7.7.0] - 2026-09-04
+
+### One home for your organization
+- **Your folders, lists, and searches now live in a single guarded store** — and load *first*, unconditionally. Before, they were kept in two places with the real copy only consulted when books were present: a boot with an empty book database silently fell back to a stale second copy (the fog behind more than one past mystery). Now the organization loads no matter what — proven by deleting the entire book database and watching 249 folders come back untouched.
+- **The Welcome screen stops impersonating data loss.** If your books are gone but your organization is intact (cleared browser data, a new machine), it now says so — *"Your folders and lists are intact"* — and lists your recovery options best-first: Import from Relay (your library is still in the cloud), Restore a backup (noting it also rolls your folders back to the backup's copy), or fetch fresh and then import. Returning users no longer get the set-up-from-scratch tutorial. Oh — and the real logo replaced the generic 📚.
+- **Every tab-open was quietly costing a full cloud upload.** The sync watcher treated the app's own loading as "changes" and pushed an identical ~17 MB copy on your first tab-switch, every session — likely most of the lingering "writes still a bit high." A boot is not a change anymore. (A restore's settling wave had the same disease; also cured.)
+
+### The library that matches Amazon exactly
+- **The Orphan filter can finally see.** The fetcher has flagged books that vanish from your Amazon listing since v5.0.0 — and the import has discarded those flags every single time. They now arrive, on desktop and mobile.
+- **…and it stops crying wolf.** With sight restored, 13 "removed from Amazon" books turned out to be present all along: physical items (maps, a DVD, one book Amazon sincerely calls **"Shoes"**) that the scan refused to *count* because their format wasn't book-shaped. Presence checks are now format-blind — a day-long live investigation ended with every book accounted for and the library matching Amazon **exactly**, once wishlist, duplicate records, and dead entries are each counted as what they are. (The full API findings are recorded in docs/design/FORMAT-POLICY.md so none of it gets relitigated.)
+
+### Formats tell the truth
+- **No more invented "Kindle eBook."** That value was never Amazon's — it was our import default, worn by 262 books including paper maps. Blank now means honestly unknown; a one-time cleanup clears the old token everywhere (and keeps clearing it for anyone updating later).
+- **Real formats arrive on their own.** The removed-books check already walks your whole Amazon listing — it now also fills blank Formats with Amazon's verbatim value at zero extra cost. The maps say *Map*. The shoe book says *Shoes*.
+- **And Format is yours to edit** — in the book dialog and in bulk (right-click → Edit → Format…), free text with suggestions drawn from your own library's vocabulary. An edited Format wins over every future fetch, forever. Typical bulk move: sort All Books by Format, select the blanks, set "Kindle Edition."
+
+### Fetcher & bookmarklet (Library fetcher v5.3.1, Nav hub v2.1.1)
+- **Two new ownership types from the field**: public-library loans and Audible Plus items now classify properly (labels, badges, filters) instead of landing as "unknown" — the second payoff of the unknown-type telemetry.
+- **The fetch dialog stopped fibbing**: the completion message describes the cloud upload that actually happens (the "find your file in Downloads" era ended long ago); the removed-books check says *"Already saved — safe to close this tab"* with a tap-for-details ℹ️ instead of guilt-tripping you into waiting; and both dialogs wear the logo.
+- **The bookmarklet works from any regular webpage** — it always did, but its failure message on sites that block bookmarklets confidently blamed your internet connection. It now names the real cause. (Chrome's blank New Tab page blocks all bookmarklets; that one's the browser.)
+
+### Mobile 1.8.0
+- Reads folders from the same single store as the desktop, shows the new ownership badges, and inherits the format fixes through sync.
+
+### Under the hood
+- Usage alert emails (operator-facing) stopped re-announcing storage levels nightly: counters alert on crossings, storage alerts once per band change, level-worded.
+- Wizard undo returns books to their original position instead of the bottom of the Inbox; a context-menu edit crash fixed; storage-band memory for alerts; FORMAT-POLICY.md.
+
 ## [7.6.2] - 2026-09-02
 
 ### Receipts and honesty

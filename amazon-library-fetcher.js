@@ -18,7 +18,20 @@
 
 async function fetchAmazonLibrary() {
     const PAGE_TITLE = document.title;
-    const FETCHER_VERSION = 'v5.1.0';
+    const FETCHER_VERSION = 'v5.3.1';
+
+    // v5.2.4 - Site base URL for dialog assets (the logo), derived the same way the nav hub
+    // derives its script base: the bookmarklet injects TARGET_ENV before loading anything.
+    const ASSET_BASE = (window._READERWRANGLER_TARGET_ENV === 'LOCAL')
+        ? 'http://localhost:8000/'
+        : (window._READERWRANGLER_TARGET_ENV === 'DEV')
+            ? 'https://ron-l.github.io/readerwranglerdev/'
+            : 'https://readerwrangler.com/';
+    // Logo with emoji fallback — Amazon's page CSP may block third-party images, and a
+    // broken-image glyph would be worse than the emoji ever was.
+    // v5.2.5 - Centered ABOVE the title (inline-left "looked off" — Ron); title centers under it.
+    // (block + margin-auto: never trust host-page CSS — pages that make img display:block defeat text-align centering)
+    const LOGO_HEADER = `<div style="text-align: center; margin-bottom: 4px;"><img src="${ASSET_BASE}icons/logo-transparent.png" alt="" style="width: 40px; height: auto; display: block; margin: 0 auto;" onerror="this.outerHTML='\u{1F4DA}'"></div>`;
     // Minimum latency floor between Amazon API calls (adopted from the 2026-08 external
     // review, item 4): today's politeness is EMERGENT — it comes from Amazon's backend
     // RTT (~400ms), which is their engineering decision and can change without notice.
@@ -59,7 +72,6 @@ async function fetchAmazonLibrary() {
     // resolve to nothing, so a batch made ENTIRELY of them returned empty (which is what the recovery batches
     // were). With the header they resolve, so batching is safe again (validated: 30/30, incl. hash-dependent).
     const RECOVERY_BATCH_SIZE = 30;
-    const LIBRARY_FILENAME = 'amazon-library.json';
     const startTime = Date.now();
 
     // Retry configuration for API errors
@@ -102,17 +114,14 @@ async function fetchAmazonLibrary() {
         }
     }
 
-    // Book-only bindings (filter out non-book items)
-    const BOOK_BINDINGS = [
-        'Kindle Edition',
-        'Paperback',
-        'Hardcover',
-        'Mass Market Paperback',
-        'Board book',
-        'Unknown Binding',
-        'Audible Audiobook',
-        'Kindle Edition with Audio/Video'
-    ];
+    // v5.3.0 (2026-09-04) - FORMAT POLICY: the BOOK_BINDINGS allow-list that lived here is GONE,
+    // deliberately (see docs/design/FORMAT-POLICY.md before reintroducing anything like it).
+    // Amazon's format vocabulary is an unbounded folksonomy — a real children's book in Ron's
+    // library was reclassified as "Shoes" — so any format allow/deny list silently drops real
+    // content the day Amazon invents a label. Worse, the list's use inside the orphan scan's
+    // verification loop false-flagged 13 present books as removed-from-Amazon for months.
+    // Policy now: capture whatever the library API lists, record the binding VERBATIM, and
+    // never judge format anywhere. Users control visibility with folders/filters/edits.
 
     // Global tracking for statistics
     const stats = {
@@ -138,7 +147,7 @@ async function fetchAmazonLibrary() {
             retry3: 0,
             failed: 0
         },
-        nonBooksFiltered: [],
+        formatsSeen: {},   // v5.3.0 - distinct binding values among NEW books (observability, never filtering)
         booksWithoutAuthors: [],
         aiSummariesUsed: [],
         apiErrorBooks: [],
@@ -167,6 +176,8 @@ async function fetchAmazonLibrary() {
             koll: 0,         // Kindle Owners' Lending Library
             comixology: 0,   // Comixology Unlimited
             insideAmazon: 0, // Amazon Insider (employee/internal testing program — speculative)
+            publicLibraryLending: 0, // Public-library loan (Libby/OverDrive → Kindle) — field telemetry 2026-09-03
+            audiblePlus: 0,  // Audible Plus subscription catalog item — field telemetry 2026-09-03
             unknown: []      // { asin, title, rawType } - for investigation
         }
     };
@@ -253,8 +264,9 @@ async function fetchAmazonLibrary() {
                     padding: 4px 8px;
                     line-height: 1;
                 " onmouseover="this.style.color='#333'" onmouseout="this.style.color='#999'">✕</button>
-                <div style="font-size: 18px; font-weight: bold; color: #333; margin-bottom: 10px;">
-                    📚 Library Download ${FETCHER_VERSION}
+                ${LOGO_HEADER}
+                <div style="font-size: 18px; font-weight: bold; color: #333; margin-bottom: 10px; text-align: center;">
+                    Library Download ${FETCHER_VERSION}
                 </div>
                 <div id="infoBanner" style="display: none; font-size: 13px; color: #856404; background: #fff3cd; border: 1px solid #ffc107; border-radius: 6px; padding: 8px 12px; margin-bottom: 10px;">
                 </div>
@@ -350,8 +362,9 @@ async function fetchAmazonLibrary() {
             if (!overlay) return;
             // Build the multi-state dialog — fetch result at top, orphan area below
             overlay.innerHTML = `
-                <div style="font-size: 18px; font-weight: bold; color: #333; margin-bottom: 10px;">
-                    📚 Library Download ${FETCHER_VERSION}
+                ${LOGO_HEADER}
+                <div style="font-size: 18px; font-weight: bold; color: #333; margin-bottom: 10px; text-align: center;">
+                    Library Download ${FETCHER_VERSION}
                 </div>
                 <div style="font-size: 14px; color: #2e7d32; margin-bottom: 4px; font-weight: 500;">
                     ✅ ${message}
@@ -361,19 +374,20 @@ async function fetchAmazonLibrary() {
                 </div>
                 <div id="orphanSection" style="border-top: 1px solid #eee; padding-top: 12px;">
                     <div id="orphanStatus" style="font-size: 14px; color: #667eea; margin-bottom: 8px; font-weight: 500;">
-                        Scanning for orphans...
+                        Checking for books removed from Amazon…
                     </div>
                     <div id="orphanDetail" style="font-size: 13px; color: #666; margin-bottom: 8px;">
-                        Checking which books are still in your Amazon library
+                        Already saved — safe to close this tab.
+                        <span id="orphanInfo" title="What happens if I close?" style="cursor: pointer;">ℹ️</span>
+                    </div>
+                    <div id="orphanInfoPop" style="display: none; font-size: 12px; color: #555; background: #f3f4f6; border-radius: 6px; padding: 8px 10px; margin-bottom: 8px; text-align: left; line-height: 1.5;">
+                        Your books were uploaded before this check started. If you close now, the check for removed books simply finishes on your next fetch.
                     </div>
                     <div id="orphanBarContainer" style="margin-bottom: 8px;">
                         <div style="background: #e0e0e0; border-radius: 4px; height: 8px; overflow: hidden;">
                             <div id="orphanBarFill" style="background: linear-gradient(90deg, #667eea, #764ba2); height: 100%; width: 0%; transition: width 0.3s ease;"></div>
                         </div>
                         <div id="orphanBarText" style="font-size: 12px; color: #666; margin-top: 4px; text-align: center;"></div>
-                    </div>
-                    <div style="font-size: 12px; color: #999;">
-                        Leave this tab open to complete the scan.
                     </div>
                 </div>
                 <div id="closeSection" style="display: none; margin-top: 15px;">
@@ -393,6 +407,13 @@ async function fetchAmazonLibrary() {
                 </div>
             `;
             overlay.querySelector('#closeBtn2')?.addEventListener('click', () => overlay.remove());
+            // v5.2.3 - ℹ️ is click-to-toggle: an info icon AFFORDS clicking, and the native title
+            // tooltip needs a motionless 1s hover nobody gives it (Ron clicked, nothing happened)
+            const infoBtn = overlay.querySelector('#orphanInfo');
+            const infoPop = overlay.querySelector('#orphanInfoPop');
+            if (infoBtn && infoPop) infoBtn.addEventListener('click', () => {
+                infoPop.style.display = infoPop.style.display === 'none' ? 'block' : 'none';
+            });
         }
 
         function updateOrphanProgress(currentPage, estimatedTotalPages) {
@@ -713,6 +734,10 @@ async function fetchAmazonLibrary() {
             case 'KOLL': stats.ownershipTypes.koll++; return 'koll';
             case 'Comixology': stats.ownershipTypes.comixology++; return 'comixology';
             case 'InsideAmazon': stats.ownershipTypes.insideAmazon++; return 'insideAmazon';
+            // v5.2.0 - Both arrived via newOwnershipType telemetry (2026-09-03, same field user).
+            // Borrow-family semantics: time-limited, vanish when returned/lapsed — not owned.
+            case 'PublicLibraryLending': stats.ownershipTypes.publicLibraryLending++; return 'publicLibraryLending';
+            case 'AudiblePlus': stats.ownershipTypes.audiblePlus++; return 'audiblePlus';
             default:
                 stats.ownershipTypes.unknown.push({ asin, title, rawType });
                 return 'unknown';
@@ -1597,12 +1622,10 @@ async function fetchAmazonLibrary() {
 
                     const binding = product.bindingInformation?.binding?.displayString || null;
 
-                    // Filter out non-book items (DVDs, CDs, Maps, Shoes, etc.)
-                    if (binding && !BOOK_BINDINGS.includes(binding)) {
-                        stats.nonBooksFiltered.push({ title, asin: product.asin, binding });
-                        console.log(`   ⏭️  Skipping non-book: ${title} (${binding})`);
-                        continue;
-                    }
+                    // v5.3.0 - No format filtering (FORMAT POLICY, see top of file): everything the
+                    // library lists is captured, binding recorded verbatim. Count formats for the summary.
+                    const fmtKey = binding || '(none reported)';
+                    stats.formatsSeen[fmtKey] = (stats.formatsSeen[fmtKey] || 0) + 1;
 
                     // Track books without authors
                     if (!authors || authors === 'Unknown Author') {
@@ -1624,7 +1647,8 @@ async function fetchAmazonLibrary() {
                     }
 
                     // Extract ownership type from relationshipSubType (shared helper — see resolveOwnershipType)
-                    // Known values: Purchase, Sample, Sharing, Prime, KindleUnlimited, KOLL, Comixology, InsideAmazon
+                    // Known values: Purchase, Sample, Sharing, Prime, KindleUnlimited, KOLL, Comixology, InsideAmazon,
+                    //               PublicLibraryLending, AudiblePlus
                     const rawOwnershipType = node.relationshipSubType?.[0] || 'Purchase';
                     const ownershipType = resolveOwnershipType(rawOwnershipType, product.asin, title);
 
@@ -1819,11 +1843,10 @@ async function fetchAmazonLibrary() {
                         const title = product.title?.displayString || 'Unknown Title';
                         // v4.11.0 - NO binding filter here: these are items Amazon already lists in the owned
                         // Kindle library, so they're legitimate. And getProducts' binding is unreliable for them
-                        // (it returned "Audio CD" for a Kindle-owned book — likely the same catalog inconsistency
-                        // that nulls them in the list query), so keep it only if it's a real book binding, else
-                        // leave it null rather than store a wrong Format.
-                        let binding = product.bindingInformation?.binding?.displayString || null;
-                        if (binding && !BOOK_BINDINGS.includes(binding)) binding = null;
+                        // (it once returned "Audio CD" for a Kindle-owned book). v5.3.0 FORMAT POLICY:
+                        // store it VERBATIM anyway — an odd label is information, a nulled one is a lie,
+                        // and the user can edit Format in the app since 7.7.0.
+                        const binding = product.bindingInformation?.binding?.displayString || null;
                         const authors = extractAuthors(product);
                         const { coverUrl, coverUrlHiRes } = extractCoverUrls(product);
                         const seriesData = product.bookSeries?.singleBookView?.series;
@@ -2419,7 +2442,7 @@ async function fetchAmazonLibrary() {
         // Step 7: Merge and save library
         stats.timing.mergeStart = Date.now();
         console.log('[7/7] Merging with existing data and saving library...');
-        progressUI.updatePhase('Saving Library', 'Merging and downloading library file');
+        progressUI.updatePhase('Saving Library', 'Merging fetched data...');
 
         // v4.11.7 - Retro-backfill series for EXISTING books that have none (dead editions recovered by earlier
         // runs before this parser existed, e.g. the Gideon Sable novels). Title-only, precision-first; never
@@ -2475,7 +2498,7 @@ async function fetchAmazonLibrary() {
         const totalDuration = Date.now() - startTime;
 
         console.log('\n========================================');
-        console.log('✅ FETCH COMPLETE - READY TO SAVE');
+        console.log('✅ FETCH COMPLETE - READY TO UPLOAD');
         console.log('========================================\n');
 
         console.log('⏱️  TIMING');
@@ -2511,6 +2534,12 @@ async function fetchAmazonLibrary() {
         }
         if (stats.ownershipTypes.insideAmazon > 0) {
             console.log(`   Amazon Insider:               ${stats.ownershipTypes.insideAmazon}`);
+        }
+        if (stats.ownershipTypes.publicLibraryLending > 0) {
+            console.log(`   Library Loans:                ${stats.ownershipTypes.publicLibraryLending}`);
+        }
+        if (stats.ownershipTypes.audiblePlus > 0) {
+            console.log(`   Audible Plus:                 ${stats.ownershipTypes.audiblePlus}`);
         }
         if (stats.ownershipTypes.unknown.length > 0) {
             console.log(`   Unknown:                      ${stats.ownershipTypes.unknown.length}`);
@@ -2575,19 +2604,14 @@ async function fetchAmazonLibrary() {
             } catch (e) { console.warn('Age-cap check skipped:', e.message); }
         }
 
-        const totalFetched = newBooks.length + stats.nonBooksFiltered.length;
         console.log('📊 FETCH RESULTS');
-        console.log(`   Total books fetched:          ${totalFetched}`);
-        if (stats.nonBooksFiltered.length > 0) {
-            console.log(`   Non-books filtered:           ${stats.nonBooksFiltered.length}`);
-            stats.nonBooksFiltered.slice(0, 3).forEach(item => {
-                console.log(`      • ${item.title.substring(0, 50)} (${item.binding})`);
-            });
-            if (stats.nonBooksFiltered.length > 3) {
-                console.log(`      • ... and ${stats.nonBooksFiltered.length - 3} more`);
-            }
+        console.log(`   Total books fetched:          ${newBooks.length}`);
+        // v5.3.0 - FORMAT POLICY: nothing is filtered by format anymore; report what was seen instead
+        const fmtEntries = Object.entries(stats.formatsSeen);
+        if (fmtEntries.length > 0) {
+            console.log(`   Formats seen (new books):     ${fmtEntries.map(([f, n]) => `${f} ×${n}`).join(', ')}`);
         }
-        console.log(`   Books kept:                   ${newBooks.length}\n`);
+        console.log('');
 
         // v4.11.0 - COMPLETENESS / reconciliation (no silent drops)
         console.log('🧮 COMPLETENESS');
@@ -2728,19 +2752,17 @@ async function fetchAmazonLibrary() {
             console.log('');
         }
 
-        console.log('💾 FILE SAVED');
-        console.log(`   ✅ ${LIBRARY_FILENAME} (${finalBooks.length} books)`);
+        // v5.2.1 - Pre-relay fossil replaced: the old block claimed a file was saved to
+        // Downloads (nothing is written locally since the relay became the save path).
+        console.log('💾 SAVED TO CLOUD');
+        console.log(`   ✅ ${finalBooks.length} books sent through your encrypted relay`);
         console.log('========================================\n');
         console.log('👉 Next steps:');
-        console.log('   1. Find the library file in your Downloads folder');
-        console.log('   2. Keep it somewhere you can find it later (Desktop, Documents, etc.)');
-        console.log('   3. Open ReaderWrangler and load your library file to start organizing!');
-        console.log('   4. Status bar will show your data is fresh\n');
+        console.log('   1. Open ReaderWrangler (or switch to its tab)');
+        console.log('   2. Import when the update banner appears — your new books land in the Inbox\n');
         console.log('💡 Next time you run this script:');
-        console.log('   - Select amazon-library.json when prompted');
-        console.log('   - Only NEW books will be fetched & enriched');
-        console.log('   - Library file will be updated automatically');
-        console.log('   - Status bar will reflect the new fetch');
+        console.log('   - Only NEW books will be fetched & enriched (fast)');
+        console.log('   - Tags, prices, and enrichment refresh for the rest');
         console.log('========================================\n');
 
         // Show fetch-complete UI and begin orphan scan
@@ -2759,6 +2781,7 @@ async function fetchAmazonLibrary() {
 
         try {
             const amazonAsins = new Set();
+            const scanBindings = new Map(); // v5.3.0 - asin → verbatim binding, for blank-Format backfill
             let orphanCursor = "";
             let orphanPage = 0;
             let orphanHasMore = true;
@@ -2841,12 +2864,16 @@ async function fetchAmazonLibrary() {
                     const product = node.product;
                     // v4.11.0 - A null-product node is STILL present in Amazon's library (just unresolved by the
                     // list query), so it is NOT an orphan — count its ASIN so recovered books aren't false-flagged.
-                    // Only skip genuine non-books (product present with a non-book binding).
-                    if (product) {
-                        const binding = product.bindingInformation?.binding?.displayString || null;
-                        if (binding && !BOOK_BINDINGS.includes(binding)) continue; // Skip real non-books
-                    }
+                    // v5.3.0 - THE FALSE-ORPHAN FIX (2026-09-04): the binding skip that lived here made the
+                    // verification set format-judgmental — 13 present books (maps, a DVD, a book Amazon calls
+                    // "Shoes") were flagged "no longer in your Amazon library" on every scan because their
+                    // bindings weren't in BOOK_BINDINGS. Existence-verification must be BINDING-BLIND:
+                    // presence is presence.
                     amazonAsins.add(node.asin);
+                    // v5.3.0 - Free backfill: the scan already carries each node's binding — remember it so
+                    // blank-Format library books can be filled with Amazon's verbatim value below.
+                    const scanBinding = product?.bindingInformation?.binding?.displayString || null;
+                    if (scanBinding) scanBindings.set(node.asin, scanBinding);
                 }
 
                 console.log(`   📖 Orphan scan page ${orphanPage}${orphanTotalPages ? '/' + orphanTotalPages : ''}: ${library.edges.length} items (${amazonAsins.size} book ASINs total)`);
@@ -2870,7 +2897,19 @@ async function fetchAmazonLibrary() {
             const orphanScanDate = new Date().toISOString();
 
             // Mark all books with orphan status
+            let bindingBackfilled = 0; // v5.3.0
             for (const book of finalBooks) {
+                // v5.3.0 - Blank-Format backfill (FORMAT POLICY): the walk carried each book's
+                // verbatim binding — fill blanks with Amazon's truth. Never overwrites a real
+                // value; user-edited Formats are skipped here AND protected app-side on merge.
+                // v5.3.1 - 'Kindle eBook' counts as blank: it was the app's pre-7.7 invented
+                // default, round-tripped into the canonical via backup/restore pushes — never a
+                // real Amazon value (Amazon says 'Kindle Edition'). It silently blocked the
+                // entire first backfill (0 filled on a library with 262 of them).
+                if ((!book.binding || book.binding === 'Kindle eBook') && !book.userEdited?.binding && scanBindings.has(book.asin)) {
+                    book.binding = scanBindings.get(book.asin);
+                    bindingBackfilled++;
+                }
                 if (book.onWishlist) {
                     // Wishlist books are not in the library scan — don't mark them
                     continue;
@@ -2885,6 +2924,7 @@ async function fetchAmazonLibrary() {
             }
 
             console.log(`   📊 Orphans found: ${orphanedBooks.length}`);
+            if (bindingBackfilled > 0) console.log(`   🏷️ Formats backfilled from Amazon (blank → verbatim): ${bindingBackfilled}`);
 
             // Build ownership breakdown for orphans
             if (orphanedBooks.length > 0) {
