@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "7.7.0-alpha.14";  // Build version for this file
+        const ORGANIZER_VERSION = "7.7.0-alpha.15";  // Build version for this file
 
         // v6.19.0 - Dev environments talk to the DEV relay worker (isolated KV namespace), so
         // local/dev testing can never touch production relay data. Mirrors the nav-hub's rule,
@@ -5779,7 +5779,11 @@
                             ratingCount: item.reviewCount || '',
                             description: item.description || '',
                             topReviews: item.topReviews || [],
-                            binding: item.binding || undefined, // v7.7.0-alpha.12 (FORMAT POLICY, 2026-09-04) - blank means unknown; the old 'Kindle eBook' default was an invented claim (262 of Ron's books wore it, incl. physical items). Verbatim from Amazon or nothing; user-editable since alpha.13.
+                            // v7.7.0-alpha.12 (FORMAT POLICY, 2026-09-04) - blank means unknown; the old 'Kindle eBook'
+                            // default was an invented claim. alpha.15: the token is also FILTERED on the way in —
+                            // backup/restore round trips seeded it into the relay canonical, and without this filter
+                            // every import resurrected it (blocking the fetcher's verbatim backfill forever).
+                            binding: (item.binding === 'Kindle eBook' ? undefined : item.binding) || undefined,
                             coverUrl: item.coverUrl,
                             publicationDate: item.publicationDate || '',
                             hasEnrichedData: true,
