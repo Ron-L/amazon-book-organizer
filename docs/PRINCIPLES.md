@@ -10,6 +10,13 @@ and recurred ~11 more times anyway; one PM even records the lesson being read an
 the rule, checklist item, memory file, or code pattern that makes it mechanical. A principle without an
 enforcement is a wish.
 
+**Era note (Ron, 2026-09-04)**: some recurrence counts below are partly artifacts of earlier AI model
+generations, not process gaps — early models fought the versioning rules, couldn't reliably evaluate the
+old trigger-based rule system (abandoned for that reason), and drifted from instructions in ways current
+models (Fable 5 era) simply don't. The enforcement mechanisms remain valuable — but "execution failures
+against adequate rules" largely healed with better models, which was outside our control and happily
+happened. Read the pre-2026-08 war stories with that lens; keep the mechanisms anyway.
+
 ---
 
 ## THE LAWS
@@ -18,6 +25,10 @@ enforcement is a wish.
 The single most-repeated collaboration failure (10+ recurrences, including "You went off the reservation"
 and three violations in one release). Questions asked without waiting are monologue. After any confusion or
 correction: state the conclusion, then WAIT — the 10-second pause prevents the 10-minute fix.
+Two amendments (Ron, 2026-09-04): **if in doubt of the user's intention, ask and clarify** — a wrong guess
+executed is worse than a question; and **honest pushback is always welcome** — a standing invitation, not a
+risk. The record backs both: every pushback that shipped (title-tiebreak veto, backwards-controls catch,
+auto-mode-switch rejection) improved the product.
 **Enforcement**: CLAUDE.md Collaboration Mode; `feedback_wait_for_answer` memory; "discussion mode" protocol
 with explicit enter/exit.
 
@@ -193,8 +204,11 @@ them in one table. Never bare "not worth chasing" — chase it or log it with th
 | PATTERNS.md / pattern library | v3.3.2 (2025-11-11) | **This file**, ten months later |
 | Complexity budget (>3 iterations → review) | v3.3.2 (2025-11-11) | `feedback_debugging` Rule 2 (2026-08-30) |
 | Feature-parity checklist for big refactors | v5.0.x (4 recommendations) | Still unbuilt — required for the next big-bang |
-| Field-mapping reference doc | v3.8.0 (2025-12-20) | Unbuilt; the class of bug recurred |
-| Automated test suite | v4.16.0, v5.0.0 | Deliberately deferred → **pre-launch test gate** (data paths only) |
+| Field-mapping reference doc | v3.8.0 (2025-12-20) | Superseded 2026-09-04: the test gate's import-mapping snapshot suite IS the field map, enforced |
+| Automated test suite | v4.16.0, v5.0.0 | Deliberately deferred → **pre-launch test gate** (data paths only; PRELAUNCH-TEST-GATE.md) |
+| Domain-boundary checklist (cross-component comms) | v3.8.0 (2025-12-20) | Superseded: Law 2 + the platform-facts section + MULTI-INSTANCE.md's universe model |
+| Release-criteria checkpoint before dropping the suffix | v3.8.0 (2025-12-20) | Superseded: the CLAUDE.md release checklist + the CHANGELOG-past-Ron ("word") ritual |
+| Trigger-based rule system | v3.x era | Abandoned — early models couldn't evaluate triggers reliably; replaced by CLAUDE.md behaviors + memory rules, which current models follow |
 
 The pattern in the graveyard is the meta-principle again: proposals became real only when they became
 mechanisms (a file that loads, a rule that fires, a checklist line). When adding to this document, add the
