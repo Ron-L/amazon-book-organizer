@@ -9,6 +9,12 @@
 
 ---
 
+## 🔥 Active roadblock
+
+- [ ] **Auto-Organize "Already filed" section: compact layout for large N** (Ron 2026-09-04, mid-Inbox-cleanup) — NOT a regression (layout unchanged since 6.16.0, 2026-08-09): it renders one row per book (cover + home chips), which reads fine at the usual 1-4 books but becomes a skyscraper at 25 (first met a full Heinlein backlog). Should group by home folder with cover-wrap rows, matching the "Will organize" section's layout so both halves of the dialog speak the same language. Function unaffected (selection/organize work).
+
+---
+
 ## 🚦 Pre-Launch (must-do before public launch)
 
 **Docs & onboarding**
