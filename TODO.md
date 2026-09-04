@@ -48,7 +48,6 @@
 - [ ] **DEL deletes the folder(s) selected in the right-pane list / Folders overview** — today the DEL key only deletes the folder you're *inside* (`selectedFolderId`), not a right-pane row selection (`getSelectedFolderIds()`). Wire single-select via `deleteFolder`, multi-select via a batch confirm + one compound undo (best once the ops layer has a `deleteFolders(folders)` primitive — don't ship single-only, it's more confusing than neither). Surfaced during ops refactor #1.
 
 
-- [x] **Folder double-store consolidation (audit F1)** — DONE 7.7.0-alpha.1-6 (blob = single gated source, load reorder, all FOLDERS_KEY/BOOKLISTS_KEY writers removed incl. restore zombie, STATUS_KEY guarded, mobile blob-first, loud save failures, Welcome-screen intact-org banner). Bonus kills: restore echo push (alpha.2) + boot echo push (alpha.3) — likely the write-diet residue. `rw_folders` identified (Jan-2026 v5.0.0 folder prototypes) + deleted 2026-09-03. (Prod's dead-channel legacy singles: WIPED 2026-09-02 after TTL/activity evidence review.)
 - [ ] **Legacy FOLDERS_KEY/BOOKLISTS_KEY migration reads: KEEP INDEFINITELY** (Ron 2026-09-04: field users update on their own schedule — GoatCounter shows real users; the reads are cheap and dated comments explain them). Revisit only with adoption evidence, never on a release-count schedule.
 - [ ] **Multi-tab hardening — Web-Locks read-only second tab** + reload-then-promote + live/freeze viewer → designed in docs/design/MULTI-INSTANCE.md §4. NEXT in the agreed queue after 7.7.0 lands.
 
