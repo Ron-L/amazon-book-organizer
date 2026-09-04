@@ -1,8 +1,9 @@
-# Organizing Rules — Ron's standing method
+# Suggested Organizing Principles
 
 _The prescriptive companion to [design/WORKFLOW-PATTERNS.md](design/WORKFLOW-PATTERNS.md) (which holds the
-patterns and trade-offs). This file is the **crib sheet**: when filing anything, apply these rules the same
-way every time. Ratified 2026-09-04._
+patterns and trade-offs). This file is the **crib sheet**: one consistent way to file everything, applied
+the same way every time. There's no single right way to use ReaderWrangler — these are principles that
+compose well. Distilled 2026-09-04._
 
 ---
 

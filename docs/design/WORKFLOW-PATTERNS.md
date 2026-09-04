@@ -81,7 +81,7 @@ _(Historical note: tags were once considered for "next reads" — still perfectl
   the periodic **🔍 Orphan filter sweep** finds them; delete → Empty Trash tombstones them for good. The
   flag does the remembering.
 
-Distilled as prescriptive rules in [../ORGANIZING-RULES.md](../ORGANIZING-RULES.md).
+Distilled as prescriptive rules in [../SUGGESTED-ORGANIZING-PRINCIPLES.md](../SUGGESTED-ORGANIZING-PRINCIPLES.md).
 
 ## Meta
 - **There's no single right way** — these are compositions of the same primitives (folders, Book Lists, tags, saved searches, Auto-Organize). The guide should present them as menus of trade-offs, not mandates.
