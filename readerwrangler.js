@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "7.7.0-alpha.11";  // Build version for this file
+        const ORGANIZER_VERSION = "7.7.0-alpha.12";  // Build version for this file
 
         // v6.19.0 - Dev environments talk to the DEV relay worker (isolated KV namespace), so
         // local/dev testing can never touch production relay data. Mirrors the nav-hub's rule,
@@ -3702,6 +3702,22 @@
                         if (loadedBooks.length > 0) {
                             loadedBooks = await mergeCollectionsIntoBooks(loadedBooks);
 
+                            // v7.7.0-alpha.12 (2026-09-04) - FLEET MIGRATION, keep indefinitely (field users
+                            // update on their own schedule): 'Kindle eBook' was never an Amazon value — it was
+                            // RW's import-time DEFAULT for books captured without binding info (format-blind
+                            // era), a standing lie worn by 262 of Ron's books including physical maps and one
+                            // item Amazon calls "Shoes". Blank = honest unknown; real values arrive verbatim
+                            // via the fetcher's scan backfill (v5.3.0) or user edits. Idempotent — the default
+                            // is no longer produced anywhere, so this converges to a no-op.
+                            {
+                                let migrated = 0;
+                                loadedBooks = loadedBooks.map(b => {
+                                    if (b.binding === 'Kindle eBook' && !b.userEdited?.binding) { migrated++; return { ...b, binding: undefined }; }
+                                    return b;
+                                });
+                                if (migrated > 0) console.log(`🏷️ Format migration: cleared the invented 'Kindle eBook' default on ${migrated} book(s) — blank until Amazon or you says otherwise`);
+                            }
+
                             // v6.3.0 - Data integrity check (ghost refs, duplicates, homeless, corrupted).
                             // v7.7.0-alpha.1 - No direct localStorage write: the guarded blob save persists
                             // the corrected folders once setFolders lands.
@@ -5763,7 +5779,7 @@
                             ratingCount: item.reviewCount || '',
                             description: item.description || '',
                             topReviews: item.topReviews || [],
-                            binding: item.binding || (normalized.onWishlist ? undefined : 'Kindle eBook'), // v6.12.0 - don't claim "Kindle" for unknown-format wishlist books
+                            binding: item.binding || undefined, // v7.7.0-alpha.12 (FORMAT POLICY, 2026-09-04) - blank means unknown; the old 'Kindle eBook' default was an invented claim (262 of Ron's books wore it, incl. physical items). Verbatim from Amazon or nothing; user-editable since alpha.13.
                             coverUrl: item.coverUrl,
                             publicationDate: item.publicationDate || '',
                             hasEnrichedData: true,
@@ -5830,7 +5846,7 @@
                             ratingCount: amazonData?.customerReviewsSummary?.count?.displayString || '',
                             description: extractDescription(amazonData?.description),
                             topReviews: amazonData?.customerReviewsTop?.reviews || [],
-                            binding: amazonData?.bindingInformation?.binding?.displayString || (normalized.onWishlist ? undefined : 'Kindle eBook'), // v6.12.0 - real format if known; never falsely "Kindle" for wishlist
+                            binding: amazonData?.bindingInformation?.binding?.displayString || undefined, // v7.7.0-alpha.12 (FORMAT POLICY) - blank means unknown, never an invented default
                             coverUrl: coverUrl,
                             publicationDate: '', // Legacy format doesn't have publication date
                             hasEnrichedData: true,
