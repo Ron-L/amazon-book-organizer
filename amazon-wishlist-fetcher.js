@@ -26,9 +26,14 @@
 async function addToWishlist() {
     'use strict';
 
-    const FETCHER_VERSION = 'v2.0.1';
+    const FETCHER_VERSION = 'v2.0.2';
     const SCHEMA_VERSION = '2.1';
     const LIBRARY_FILENAME = 'amazon-library.json';
+
+    // v2.0.2 (onWishlist retirement, item 0) - wishlist truth = ownershipType only; this fetcher
+    // still WRITES `onWishlist: true` in its book literals for old readers (deliberate, kept),
+    // but reads decide via this accessor (fallback covers pre-ownershipType canonical books).
+    const isWishlisted = (book) => book.ownershipType === 'wishlist' || (!book.ownershipType && book.onWishlist === true);
 
     // Use top-level document/window to handle iframe context (e.g., if user clicked an ad)
     const doc = top.document;
@@ -804,8 +809,7 @@ async function addToWishlist() {
             const existingBook = knownBooks.get(book.asin);
 
             if (existingBook) {
-                const isWishlist = existingBook.onWishlist && (!existingBook.ownershipType || existingBook.ownershipType === 'wishlist');
-                const label = isWishlist ? 'Already on your wishlist' : 'Already in your library';
+                const label = isWishlisted(existingBook) ? 'Already on your wishlist' : 'Already in your library';
                 console.log(`   ⚠️ ${label}: "${book.title}" (ASIN: ${book.asin})\n`);
 
                 console.log('========================================');

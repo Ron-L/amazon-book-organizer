@@ -36,6 +36,15 @@ const parsePrice = (price) => {
     return null;
 };
 
+// ===== Ownership =====
+// v7.8.0 (onWishlist retirement, batch item 0) - THE wishlist-truth accessor, shared by the app
+// and storage.js (uiHelpers loads first). ownershipType is the ONLY decision source fleet-wide;
+// the onWishlist flag is legacy wire baggage kept for old backups/letters/bookmarklets. The
+// fallback clause is the read-side backstop for stored books that predate ownershipType and
+// never flow through normalizeBook again — the one place in this page allowed to read the flag.
+// Invariant (ratified 2026-09-04): the pair never legitimately diverged; the flag was pure trap.
+const isWishlisted = (book) => book.ownershipType === 'wishlist' || (!book.ownershipType && book.onWishlist === true);
+
 // ===== Book Normalization =====
 // TODO: DEPRECATION 2026-07-20 - Remove legacy isOwned/isWishlist field handling after 6 months
 // Legacy format: isOwned: true/false (from fetcher), isWishlist: 0/1 (internal derived)
@@ -61,6 +70,11 @@ const normalizeBook = (book) => {
         normalized.onWishlist = !!book.isWishlist;
         delete normalized.isWishlist;
     }
+
+    // v7.8.0 (item 0) - THE inbound normalization: a book arriving with only the legacy flag
+    // gets the real type stamped BEFORE the purchased default below. Old backups and old
+    // fetcher letters present the flag indefinitely — this line is kept forever.
+    if (normalized.onWishlist && !normalized.ownershipType) normalized.ownershipType = 'wishlist';
 
     // Ensure defaults
     normalized.onWishlist = normalized.onWishlist ?? false;

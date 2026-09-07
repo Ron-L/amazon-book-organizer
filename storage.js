@@ -33,7 +33,8 @@ const openDB = () => {
 let _dbWriteQueue = Promise.resolve();
 
 // v4.18.0.a - Merge logic: preserve orphan wishlist items on import
-// Uses onWishlist field (normalized from legacy isWishlist/isOwned)
+// v7.8.0 (item 0) - Wishlist decisions use isWishlisted() (uiHelpers.js, loads first) —
+// ownershipType is the only decision source; onWishlist is copied through as wire baggage only.
 // v5.0.0-alpha.173.1 - Add preserveUserData param to control merge behavior
 const saveBooksToIndexedDB = async (books, preserveUserData = false) => {
     // Acquire write lock: queue behind any in-flight write
@@ -73,7 +74,7 @@ const saveBooksToIndexedDB = async (books, preserveUserData = false) => {
             // Step 2: Find orphan wishlist items (in existing but not in new import)
             const orphanWishlists = [];
             for (const [asin, existingBook] of existingByAsin) {
-                if (!newAsins.has(asin) && existingBook.onWishlist) {
+                if (!newAsins.has(asin) && isWishlisted(existingBook)) {
                     orphanWishlists.push(existingBook);
                 }
             }
@@ -95,8 +96,8 @@ const saveBooksToIndexedDB = async (books, preserveUserData = false) => {
             const existing = booksByAsin.get(book.asin);
             if (existing) {
                 duplicates.push(book.asin);
-                // Owned books (onWishlist falsy) take priority over wishlist
-                if (existing.onWishlist && !book.onWishlist) {
+                // Owned books (not wishlisted) take priority over wishlist
+                if (isWishlisted(existing) && !isWishlisted(book)) {
                     // New book is owned, replace wishlist entry
                     // Preserve user metadata from wishlist entry (column assignment preserved via localStorage)
                     wishlistToOwned.push(book.asin);
@@ -120,7 +121,7 @@ const saveBooksToIndexedDB = async (books, preserveUserData = false) => {
                         myRating: existing.myRating ?? book.myRating,  // v5.0.0-alpha.175.31 - Personal rating
                         userEdited: { ...(book.userEdited || {}), ...ueWish }  // v6.12.0 - union flags
                     });
-                } else if (!existing.onWishlist && book.onWishlist) {
+                } else if (!isWishlisted(existing) && isWishlisted(book)) {
                     // Existing is owned, new is wishlist - keep existing
                     // v5.0.0-alpha.163 - Preserve addedToWishlist and price goals from wishlist
                     booksByAsin.set(book.asin, {
@@ -137,7 +138,7 @@ const saveBooksToIndexedDB = async (books, preserveUserData = false) => {
                 const previousBook = preserveUserData ? existingByAsin.get(book.asin) : null;
                 if (previousBook) {
                     // Track wishlist → owned transitions
-                    if (previousBook.onWishlist && !book.onWishlist) {
+                    if (isWishlisted(previousBook) && !isWishlisted(book)) {
                         wishlistToOwned.push(book.asin);
                     }
                     // v5.0.0-alpha.169.7 - Prefer incoming values, fall back to IndexedDB if null

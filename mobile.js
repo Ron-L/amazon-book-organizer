@@ -1,6 +1,6 @@
 // mobile.js — ReaderWrangler Mobile Viewer
 // MOBILE_VERSION tracks mobile-specific iterations
-const MOBILE_VERSION = '1.8.0'; // suffix mirrors ORGANIZER_VERSION's -alpha.N in any alpha commit touching this file (Ron, 2026-08-30: invisible changes + no build marker = guaranteed mystery)
+const MOBILE_VERSION = '1.8.1-alpha.1'; // suffix mirrors ORGANIZER_VERSION's -alpha.N in any alpha commit touching this file (Ron, 2026-08-30: invisible changes + no build marker = guaranteed mystery)
 console.log(`✅ Mobile viewer ${MOBILE_VERSION} | APP_VERSION: ${APP_VERSION}`);
 
 // v1.7.0 - Which server is this copy talking to? Derived from the page's own address, so an
@@ -65,7 +65,9 @@ function mapBackupBook(item) {
         userNote: item.note || '',
         myRating: item.myRating || 0,
         onWishlist: item.onWishlist || false,
-        ownershipType: item.ownershipType || 'purchased',
+        // v7.8.0 (item 0) - inbound normalization: a legacy item carrying only the flag gets the
+        // real type; ownershipType is the only decision source (isWishlisted, from uiHelpers.js)
+        ownershipType: item.ownershipType || (item.onWishlist ? 'wishlist' : 'purchased'),
         orphanStatus: item.orphanStatus || null, // v6.12.0 Phase 8b - for the "orphan" ownership filter
         isHidden: item.isHidden || false,
         addedToWishlist: item.addedToWishlist || '',
@@ -368,7 +370,7 @@ function bookMatchesFilters(book, filters) {
     }
     if (filters.ownership) {
         if (filters.ownership === 'wishlist') {
-            if (!(book.onWishlist || book.ownershipType === 'wishlist')) return false;
+            if (!isWishlisted(book)) return false;
         } else if (filters.ownership === 'orphan') {
             if (book.orphanStatus !== 'orphan') return false;
         } else {
@@ -1080,7 +1082,7 @@ function CoverCard({ book, coverUrlMap, blankImageBooks, setBlankImageBooks, onT
                         backgroundColor: 'var(--bg-book-placeholder, #d4c5a9)',
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                         padding: '8px',
-                        opacity: (book.onWishlist || book.isHidden) ? 0.4 : 1
+                        opacity: (isWishlisted(book) || book.isHidden) ? 0.4 : 1
                     }}>
                         <div style={{
                             textAlign: 'center',
@@ -1103,7 +1105,7 @@ function CoverCard({ book, coverUrlMap, blankImageBooks, setBlankImageBooks, onT
                         alt=""
                         loading="lazy"
                         style={{ width: '100%', height: '100%', objectFit: 'cover',
-                            opacity: (book.onWishlist || book.isHidden) ? 0.4 : 1 }}
+                            opacity: (isWishlisted(book) || book.isHidden) ? 0.4 : 1 }}
                         onError={() => setBlankImageBooks(prev => new Set([...prev, book.id]))}
                         onLoad={(e) => checkIfBlankImage(e.target, book.id, setBlankImageBooks)}
                     />
@@ -1155,7 +1157,7 @@ function CoverCard({ book, coverUrlMap, blankImageBooks, setBlankImageBooks, onT
                     }}>
                         📁 {book.collections.length}
                     </div>
-                ) : book.onWishlist && (
+                ) : isWishlisted(book) && (
                     <div style={{
                         position: 'absolute', top: '3px', left: '3px',
                         backgroundColor: 'rgba(219,39,119,0.85)', borderRadius: '3px',
@@ -1166,7 +1168,7 @@ function CoverCard({ book, coverUrlMap, blankImageBooks, setBlankImageBooks, onT
                     </div>
                 )}
                 {/* Bottom-left: Price tag (wishlist) or Ownership badge */}
-                {book.onWishlist && book.currentPrice != null ? (
+                {isWishlisted(book) && book.currentPrice != null ? (
                     <div style={{
                         position: 'absolute', bottom: '3px', left: '3px',
                         backgroundColor: book.priceTrigger && book.currentPrice <= book.priceTrigger ? '#22c55e' : '#6b7280',
@@ -1993,7 +1995,7 @@ function FolderView({ folderId, books, folders, pinnedTagFolders, tagRegistry, b
                                         width: '40px', flexShrink: 0,
                                         aspectRatio: '2/3', borderRadius: '3px', overflow: 'hidden',
                                         boxShadow: '2px 2px 4px 1px rgba(128,128,128,0.4)',
-                                        opacity: book.onWishlist ? 0.4 : 1
+                                        opacity: isWishlisted(book) ? 0.4 : 1
                                     }}>
                                         {isBlank || !book.coverUrl ? (
                                             <div style={{
@@ -2117,7 +2119,7 @@ function BookDetailView({ bookId, books, coverUrlMap, blankImageBooks, setBlankI
 
             {/* Wishlist badge + View on Amazon — v5.6.6: button for all books */}
             <div style={{ textAlign: 'center', marginBottom: '12px', display: 'flex', justifyContent: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                {book.onWishlist && (
+                {isWishlisted(book) && (
                     <span style={{ display: 'inline-block', padding: '4px 12px', borderRadius: '999px',
                         fontSize: '12px', fontWeight: 600,
                         backgroundColor: 'var(--bg-selected, #dbeafe)', color: 'var(--text-accent, #2563eb)' }}>
@@ -2334,7 +2336,7 @@ function SearchView({ books, folders, folderId, showDealsOnly, showHidden, sortO
                                     width: '48px', flexShrink: 0,
                                     aspectRatio: '2/3', borderRadius: '3px', overflow: 'hidden',
                                     boxShadow: '2px 2px 4px 1px rgba(128,128,128,0.4)',
-                                    opacity: book.onWishlist ? 0.4 : 1
+                                    opacity: isWishlisted(book) ? 0.4 : 1
                                 }}>
                                     {isBlank || !book.coverUrl ? (
                                         <div style={{

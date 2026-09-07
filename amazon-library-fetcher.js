@@ -18,7 +18,7 @@
 
 async function fetchAmazonLibrary() {
     const PAGE_TITLE = document.title;
-    const FETCHER_VERSION = 'v5.3.1';
+    const FETCHER_VERSION = 'v5.4.0';
 
     // v5.2.4 - Site base URL for dialog assets (the logo), derived the same way the nav hub
     // derives its script base: the bookmarklet injects TARGET_ENV before loading anything.
@@ -721,6 +721,12 @@ async function fetchAmazonLibrary() {
         if (!name) return { series: null, seriesPosition: null };
         return { series: name, seriesPosition: String(pos) };
     };
+
+    // v5.4.0 (onWishlist retirement, item 0) - THE wishlist-truth accessor (fetcher's own copy —
+    // pasted scripts share no modules). ownershipType is the only decision source; the onWishlist
+    // flag is legacy wire baggage this fetcher still WRITES for old readers but never reads,
+    // except this fallback clause for pre-ownershipType canonical books.
+    const isWishlisted = (book) => book.ownershipType === 'wishlist' || (!book.ownershipType && book.onWishlist === true);
 
     // v4.11.0 - Map Amazon relationshipSubType → our ownershipType, with stats tracking. Shared by the
     // Phase 1 loop and the null-product recovery pass so both classify + count ownership identically.
@@ -2276,7 +2282,7 @@ async function fetchAmazonLibrary() {
         //   - any owned book still carrying a price goal (the forgot-to-clear case).
         // Owned-no-goal books are skipped: "what would I pay for a book I own?" is a
         // question nobody asks. Cuts ~104 batched calls/fetch to ~10-12 on a big library.
-        const isBuyable = (b) => b.onWishlist || TEMP_OWNERSHIP.includes(b.ownershipType || 'unknown');
+        const isBuyable = (b) => isWishlisted(b) || TEMP_OWNERSHIP.includes(b.ownershipType || 'unknown');
         const hasGoal = (b) => b.targetPrice != null || !!b.priceTrigger;
         const skippedOwnedNoGoal = existingBooks.filter(b => !isBuyable(b) && !hasGoal(b)).length;
         const allBooksForPrices = [...newBooks, ...existingBooks.filter(b => isBuyable(b) || hasGoal(b))];
@@ -2410,10 +2416,10 @@ async function fetchAmazonLibrary() {
                             // run, so it also fixes books the incremental scan already had.
                             const orderDate = product.pastPurchase?.purchaseHistory?.lastOrderDateV2;
                             const canReadNow = (product.buyingOptions?.options || []).some(o => o.callToAction?.readNow?.url);
-                            if (orderDate && canReadNow && (book.onWishlist || TEMP_OWNERSHIP.includes(book.ownershipType))) {
-                                stats.ownershipUpgraded.push({ asin: book.asin, title: book.title, from: book.onWishlist ? 'wishlist' : book.ownershipType });
+                            if (orderDate && canReadNow && (isWishlisted(book) || TEMP_OWNERSHIP.includes(book.ownershipType))) {
+                                stats.ownershipUpgraded.push({ asin: book.asin, title: book.title, from: isWishlisted(book) ? 'wishlist' : book.ownershipType });
                                 book.ownershipType = 'purchased';
-                                book.onWishlist = false;
+                                book.onWishlist = false; // legacy wire compat: keep the pair stamped for old readers
                                 const ms = Date.parse(orderDate);
                                 if (!isNaN(ms)) book.acquisitionDate = String(ms);
                             }
@@ -2891,7 +2897,7 @@ async function fetchAmazonLibrary() {
             // Compare against our library — find orphans
             // Skip wishlist-only books (they wouldn't be in the Amazon library scan)
             const orphanedBooks = finalBooks.filter(b =>
-                !amazonAsins.has(b.asin) && !b.onWishlist
+                !amazonAsins.has(b.asin) && !isWishlisted(b)
             );
 
             const orphanScanDate = new Date().toISOString();
@@ -2910,7 +2916,7 @@ async function fetchAmazonLibrary() {
                     book.binding = scanBindings.get(book.asin);
                     bindingBackfilled++;
                 }
-                if (book.onWishlist) {
+                if (isWishlisted(book)) {
                     // Wishlist books are not in the library scan — don't mark them
                     continue;
                 }

@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "7.7.2";  // Build version for this file
+        const ORGANIZER_VERSION = "7.8.0-alpha.1";  // Build version for this file
 
         // v6.19.0 - Dev environments talk to the DEV relay worker (isolated KV namespace), so
         // local/dev testing can never touch production relay data. Mirrors the nav-hub's rule,
@@ -72,10 +72,9 @@
             audiblePlus:     { label: 'Audible Plus',     badge: 'bg-purple-500' },
             unknown:         { label: 'Unknown',          badge: 'bg-gray-500' }
         };
+        // v7.8.0 (item 0) - wishlist truth = isWishlisted() (uiHelpers.js); the flag is wire baggage.
         const getOwnershipType = (book) =>
-            (book.onWishlist && (!book.ownershipType || book.ownershipType === 'wishlist'))
-                ? 'wishlist'
-                : (book.ownershipType || 'purchased');
+            isWishlisted(book) ? 'wishlist' : (book.ownershipType || 'purchased');
         const getOwnershipLabel = (book) => (OWNERSHIP_META[getOwnershipType(book)] || OWNERSHIP_META.unknown).label;
         // v7.4.0 - Badge local instances (tab title + header chip): two identical-looking tabs,
         // one production and one localhost, is how restores land on the wrong instance. Subtle
@@ -1535,7 +1534,7 @@
                 // Ownership
                 if (filters.ownership) {
                     if (filters.ownership === 'wishlist') {
-                        if (!(book.onWishlist || book.ownershipType === 'wishlist')) return false;
+                        if (!isWishlisted(book)) return false;
                     } else if (filters.ownership === 'orphan') {
                         if (book.orphanStatus !== 'orphan') return false;
                     } else {
@@ -5228,8 +5227,8 @@
 
                 const bookItems = allBooks.map(book => ({
                     asin: book.asin,
-                    onWishlist: book.onWishlist || false,
-                    ownershipType: book.ownershipType || 'purchased',
+                    onWishlist: isWishlisted(book), // v7.8.0 - derived wire field (self-healing)
+                    ownershipType: book.ownershipType || (isWishlisted(book) ? 'wishlist' : 'purchased'),
                     isHidden: book.isHidden || false,
                     addedToWishlist: book.addedToWishlist || '',
                     title: book.title,
@@ -5369,8 +5368,8 @@
                     // v4.18.0.d - Export includes price data, genres, targetPrice (user metadata)
                     const bookItems = allBooks.map(book => ({
                         asin: book.asin,
-                        onWishlist: book.onWishlist || false,
-                        ownershipType: book.ownershipType || 'purchased',
+                        onWishlist: isWishlisted(book), // v7.8.0 - derived wire field (self-healing)
+                        ownershipType: book.ownershipType || (isWishlisted(book) ? 'wishlist' : 'purchased'),
                         isHidden: book.isHidden || false,
                         addedToWishlist: book.addedToWishlist || '',
                         title: book.title,
@@ -6283,7 +6282,7 @@
                     series: modalBook.series || '',
                     seriesPosition: modalBook.seriesPosition != null ? String(modalBook.seriesPosition) : '',
                     userNote: modalBook.userNote || '',
-                    onWishlist: modalBook.onWishlist || false,
+                    onWishlist: isWishlisted(modalBook), // v7.8.0 - form seeds from truth accessor
                     binding: modalBook.binding || '' // v7.7.0-alpha.13
                 });
                 setEditBookSeriesDropdownOpen(false);
@@ -6336,8 +6335,8 @@
                     newValues.binding = newBinding;
                 }
                 // v5.4.8 - Ownership toggle
-                if (editBookFields.onWishlist !== (modalBook.onWishlist || false)) {
-                    previousValues.onWishlist = modalBook.onWishlist || false;
+                if (editBookFields.onWishlist !== isWishlisted(modalBook)) {
+                    previousValues.onWishlist = isWishlisted(modalBook);
                     previousValues.ownershipType = modalBook.ownershipType || 'purchased';
                     newValues.onWishlist = editBookFields.onWishlist;
                     newValues.ownershipType = editBookFields.onWishlist ? 'wishlist' : 'purchased';
@@ -6389,7 +6388,7 @@
                 const selectedBooks = selectedBookIds.map(id => books.find(b => b.id === id)).filter(Boolean);
                 const fieldKey = field === 'position' ? 'seriesPosition' : (field === 'ownership' ? 'onWishlist' : (field === 'format' ? 'binding' : field)); // v7.7.0-alpha.13 - format
                 const values = new Set(selectedBooks.map(b => {
-                    const val = b[fieldKey];
+                    const val = fieldKey === 'onWishlist' ? isWishlisted(b) : b[fieldKey]; // v7.8.0 - ownership reads via accessor
                     return val != null ? String(val) : '';
                 }));
                 const prePopulate = values.size === 1 ? [...values][0] : '';
@@ -6417,7 +6416,7 @@
                 const previousValues = {};
                 bulkEditBookIds.forEach(id => {
                     const book = books.find(b => b.id === id);
-                    if (book) previousValues[id] = book[fieldKey] ?? null;
+                    if (book) previousValues[id] = (fieldKey === 'onWishlist' ? isWishlisted(book) : book[fieldKey]) ?? null; // v7.8.0
                 });
                 const anyChanged = bulkEditBookIds.some(id => previousValues[id] !== newValue);
                 if (!anyChanged) {
@@ -10087,7 +10086,7 @@
 
                         // Ownership label
                         const ownershipLabel = (b) => {
-                            if (b.onWishlist && (!b.ownershipType || b.ownershipType === 'wishlist')) return 'Wishlist';
+                            if (isWishlisted(b)) return 'Wishlist';
                             const type = b.ownershipType || 'purchased';
                             return type.charAt(0).toUpperCase() + type.slice(1);
                         };
@@ -10139,7 +10138,7 @@
                         const defaultSelections = {};
                         dupGroups.forEach(([asin, copies]) => {
                             // Default: prefer purchased over wishlist
-                            const purchased = copies.find(c => c.ownershipType && c.ownershipType !== 'wishlist' && !c.onWishlist);
+                            const purchased = copies.find(c => c.ownershipType && !isWishlisted(c));
                             defaultSelections[asin] = purchased ? purchased.id : copies[0].id;
                         });
 
@@ -10173,11 +10172,11 @@
                                                             onClick={() => { defaultSelections[asin] = copy.id; setDupReviewOpen(false); setTimeout(() => setDupReviewOpen(true), 0); }}
                                                         >
                                                             {copy.coverUrl && (
-                                                                <img src={copy.coverUrl} alt="" style={{ width: '40px', height: '60px', objectFit: 'cover', borderRadius: '3px', opacity: copy.onWishlist ? 0.5 : 1 }} />
+                                                                <img src={copy.coverUrl} alt="" style={{ width: '40px', height: '60px', objectFit: 'cover', borderRadius: '3px', opacity: isWishlisted(copy) ? 0.5 : 1 }} />
                                                             )}
                                                             <div className="flex-1 min-w-0">
                                                                 <div className="flex items-center gap-2">
-                                                                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${copy.onWishlist && (!copy.ownershipType || copy.ownershipType === 'wishlist') ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800'}`}>
+                                                                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${isWishlisted(copy) ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800'}`}>
                                                                         {ownershipLabel(copy)}
                                                                     </span>
                                                                     {isDefault && <span className="text-xs text-blue-600 font-medium">← Keep</span>}
@@ -12685,7 +12684,7 @@
                                             ) : (
                                                 /* v5.6.6 - View on Amazon shown for all books, not just wishlist */
                                                 <div className="mb-3 flex items-center gap-3">
-                                                    {modalBook.onWishlist && (
+                                                    {isWishlisted(modalBook) && (
                                                         <span className="inline-flex items-center bg-amber-100 text-amber-800 px-3 py-1 rounded-full text-sm font-medium">
                                                             ⭐ Wishlist Item
                                                         </span>
@@ -16051,7 +16050,7 @@
                                                             <td className="p-2">
                                                                 <div className="relative" style={{ minWidth: '32px', maxWidth: '48px' }}>
                                                                     {blankImageBooks.has(book.id) ? (
-                                                                        <div className={`h-12 w-8 rounded flex items-center justify-center ${book.onWishlist ? 'opacity-40' : ''}`}
+                                                                        <div className={`h-12 w-8 rounded flex items-center justify-center ${isWishlisted(book) ? 'opacity-40' : ''}`}
                                                                              style={{ backgroundColor: 'var(--bg-book-placeholder)' }}>
                                                                             <span style={{ fontSize: '6px', color: 'var(--text-secondary)', textAlign: 'center', lineHeight: 1.1, overflow: 'hidden' }}>
                                                                                 {book.title?.substring(0, 20)}
@@ -16059,7 +16058,7 @@
                                                                         </div>
                                                                     ) : (
                                                                         <img src={book.coverUrl} alt=""
-                                                                             className={`h-12 object-contain rounded ${book.onWishlist ? 'opacity-40' : ''}`}
+                                                                             className={`h-12 object-contain rounded ${isWishlisted(book) ? 'opacity-40' : ''}`}
                                                                              onError={() => setBlankImageBooks(prev => new Set([...prev, book.id]))}
                                                                              onLoad={(e) => checkIfBlankImage(e.target, book.id)} />
                                                                     )}
@@ -16645,7 +16644,7 @@
                                                         onDoubleClick={() => openBookModal(book, null)}>
                                                         <div className="relative">
                                                             {blankImageBooks.has(book.id) ? (
-                                                                <div className={`w-full rounded shadow overflow-hidden flex flex-col ${book.onWishlist ? 'opacity-40' : ''}`}
+                                                                <div className={`w-full rounded shadow overflow-hidden flex flex-col ${isWishlisted(book) ? 'opacity-40' : ''}`}
                                                                      style={{ backgroundColor: 'var(--bg-book-placeholder)', aspectRatio: '2/3' }}>
                                                                     <div className="flex-1 flex items-center justify-center px-2">
                                                                         <div className="text-center">
@@ -16657,7 +16656,7 @@
                                                                 </div>
                                                             ) : (
                                                                 <img src={book.coverUrl} alt={book.title}
-                                                                     className={`w-full h-auto rounded shadow ${book.onWishlist ? 'opacity-40' : ''}`}
+                                                                     className={`w-full h-auto rounded shadow ${isWishlisted(book) ? 'opacity-40' : ''}`}
                                                                      onError={() => setBlankImageBooks(prev => new Set([...prev, book.id]))}
                                                                      onLoad={(e) => checkIfBlankImage(e.target, book.id)} />
                                                             )}
@@ -16696,13 +16695,13 @@
                                                                 <div className="absolute top-1 left-1 bg-gray-700 bg-opacity-75 rounded px-1.5 py-0.5 text-xs font-bold text-white">
                                                                     📁 {book.collections.length}
                                                                 </div>
-                                                            ) : book.onWishlist && (
+                                                            ) : isWishlisted(book) && (
                                                                 <div className="absolute top-1 left-1 bg-pink-600 bg-opacity-85 rounded px-1.5 py-0.5 text-xs font-bold text-white" style={{ letterSpacing: '1px' }}>
                                                                     ♡+
                                                                 </div>
                                                             )}
                                                             {/* Bottom-left: Price tag (wishlist) or Ownership badge (mutually exclusive) */}
-                                                            {book.onWishlist && book.currentPrice != null ? (
+                                                            {isWishlisted(book) && book.currentPrice != null ? (
                                                                 <div
                                                                     className={`absolute bottom-1 left-1 ${book.priceTrigger && book.currentPrice <= book.priceTrigger ? 'bg-green-500' : 'bg-gray-500'} bg-opacity-90 text-xs font-bold text-white`}
                                                                     style={{
@@ -18624,7 +18623,7 @@
                                                         series: book.series || '',
                                                         seriesPosition: book.seriesPosition != null ? String(book.seriesPosition) : '',
                                                         userNote: book.userNote || '',
-                                                        onWishlist: book.onWishlist || false,
+                                                        onWishlist: isWishlisted(book), // v7.8.0 - form seeds from truth accessor
                                                         binding: book.binding || '' // v7.7.0-alpha.14 - this inline duplicate of enterEditMode missed alpha.13's new field: saving threw at binding.trim() (silent edit failure)
                                                     });
                                                     setIsEditingBook(true);
@@ -19221,8 +19220,8 @@
                         const allDescendantIds = getAllDescendantIds(folder.id);
                         const directBooks = getAllBooksInFolder(folder.id);
                         const totalBooks = directBooks.length;
-                        const ownedBooks = directBooks.filter(b => !b.onWishlist).length;
-                        const wishlistBooks = directBooks.filter(b => b.onWishlist).length;
+                        const ownedBooks = directBooks.filter(b => !isWishlisted(b)).length;
+                        const wishlistBooks = directBooks.filter(b => isWishlisted(b)).length;
 
                         // Calculate recursive total
                         const recursiveBookIds = new Set();
