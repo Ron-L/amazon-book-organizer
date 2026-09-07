@@ -114,6 +114,7 @@ const saveBooksToIndexedDB = async (books, preserveUserData = false) => {
                         seriesPosition: ueWish.seriesPosition ? existing.seriesPosition : book.seriesPosition,
                         onWishlist: preserveOwnership ? existing.onWishlist : book.onWishlist,
                         ownershipType: preserveOwnership ? existing.ownershipType : book.ownershipType,
+                        lastAmazonOwnershipType: existing.lastAmazonOwnershipType ?? book.lastAmazonOwnershipType, // v7.8.0-alpha.3 - app-side snapshot (OWNERSHIP-MODEL.md §4); local wins, incoming lacks it
                         addedToWishlist: existing.addedToWishlist,
                         // v5.0.0-alpha.163 - PRESERVE price goal when book transitions to owned
                         priceTrigger: existing.priceTrigger ?? book.priceTrigger,
@@ -165,6 +166,7 @@ const saveBooksToIndexedDB = async (books, preserveUserData = false) => {
                         seriesPosition: ue.seriesPosition ? previousBook.seriesPosition : book.seriesPosition,
                         onWishlist: ue.onWishlist ? previousBook.onWishlist : book.onWishlist,  // v5.4.8 - Ownership toggle
                         ownershipType: ue.onWishlist ? previousBook.ownershipType : book.ownershipType,  // v5.4.8
+                        lastAmazonOwnershipType: book.lastAmazonOwnershipType ?? previousBook.lastAmazonOwnershipType,  // v7.8.0-alpha.3 - snapshot survives imports (OWNERSHIP-MODEL.md §4 carrier checklist)
                         addedToWishlist: book.addedToWishlist ?? previousBook.addedToWishlist,
                         priceTrigger: book.priceTrigger ?? previousBook.priceTrigger,
                         targetPrice: book.targetPrice ?? previousBook.targetPrice,

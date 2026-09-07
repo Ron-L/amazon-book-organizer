@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "7.8.0-alpha.2";  // Build version for this file
+        const ORGANIZER_VERSION = "7.8.0-alpha.3";  // Build version for this file
 
         // v6.19.0 - Dev environments talk to the DEV relay worker (isolated KV namespace), so
         // local/dev testing can never touch production relay data. Mirrors the nav-hub's rule,
@@ -703,7 +703,7 @@
             const [tfcSelectedRemoval, setTfcSelectedRemoval] = useState(null); // selected removal group tag label
             const [tfcCheckedRemovals, setTfcCheckedRemovals] = useState(new Set()); // removal group labels checked for removal
             const [tfcUncheckedRemovalBooks, setTfcUncheckedRemovalBooks] = useState({}); // {tagLabel: Set of bookIds to keep}
-            const [editBookFields, setEditBookFields] = useState({ title: '', author: '', series: '', seriesPosition: '', userNote: '', onWishlist: false, binding: '' }); // v7.7.0-alpha.13 - Format is user-editable (FORMAT POLICY)
+            const [editBookFields, setEditBookFields] = useState({ title: '', author: '', series: '', seriesPosition: '', userNote: '', ownership: 'keep', binding: '' }); // v7.7.0-alpha.13 Format; v7.8.0-alpha.3 ownership = 'keep'|'purchased'|'wishlist'|'reset' (OWNERSHIP-MODEL.md §4)
             const [editBookSeriesDropdownOpen, setEditBookSeriesDropdownOpen] = useState(false);
             const editBookSeriesFilterRef = useRef(false); // true = filter by typed text, false = show all
             const editBookSeriesInputRef = useRef(null); // ref to series input for focus management
@@ -5229,6 +5229,7 @@
                     asin: book.asin,
                     onWishlist: isWishlisted(book), // v7.8.0 - derived wire field (self-healing)
                     ownershipType: book.ownershipType || (isWishlisted(book) ? 'wishlist' : 'purchased'),
+                    lastAmazonOwnershipType: book.lastAmazonOwnershipType || undefined, // v7.8.0-alpha.3 - carrier checklist (OWNERSHIP-MODEL.md §4)
                     isHidden: book.isHidden || false,
                     addedToWishlist: book.addedToWishlist || '',
                     title: book.title,
@@ -5370,6 +5371,7 @@
                         asin: book.asin,
                         onWishlist: isWishlisted(book), // v7.8.0 - derived wire field (self-healing)
                         ownershipType: book.ownershipType || (isWishlisted(book) ? 'wishlist' : 'purchased'),
+                        lastAmazonOwnershipType: book.lastAmazonOwnershipType || undefined, // v7.8.0-alpha.3 - carrier checklist (OWNERSHIP-MODEL.md §4)
                         isHidden: book.isHidden || false,
                         addedToWishlist: book.addedToWishlist || '',
                         title: book.title,
@@ -5805,6 +5807,7 @@
                             addedToWishlist: item.addedToWishlist || '',
                             // Ownership type (v4.9.0, v4.18.0.a - normalized handles 'wishlist' type)
                             ownershipType: normalized.ownershipType,
+                            lastAmazonOwnershipType: item.lastAmazonOwnershipType || undefined, // v7.8.0-alpha.3 - carrier checklist (OWNERSHIP-MODEL.md §4)
                             // Collections data
                             readStatus: bookCollections.readStatus,
                             collections: bookCollections.collections,
@@ -5872,6 +5875,7 @@
                             addedToWishlist: item.addedToWishlist || '',
                             // Ownership type (v4.9.0, v4.18.0.a - normalized handles 'wishlist' type)
                             ownershipType: normalized.ownershipType,
+                            lastAmazonOwnershipType: item.lastAmazonOwnershipType || undefined, // v7.8.0-alpha.3 - carrier checklist (OWNERSHIP-MODEL.md §4)
                             // Collections data
                             readStatus: bookCollections.readStatus,
                             collections: bookCollections.collections,
@@ -6267,7 +6271,7 @@
                 setModalBook(null);
                 setModalNavOverride(null);
                 setIsEditingBook(false);
-                setEditBookFields({ title: '', author: '', series: '', seriesPosition: '', userNote: '', onWishlist: false, binding: '' });
+                setEditBookFields({ title: '', author: '', series: '', seriesPosition: '', userNote: '', ownership: 'keep', binding: '' });
                 setEditBookSeriesDropdownOpen(false);
                 setShareDropdownOpen(false);
                 setContextSubmenu(null);
@@ -6282,7 +6286,9 @@
                     series: modalBook.series || '',
                     seriesPosition: modalBook.seriesPosition != null ? String(modalBook.seriesPosition) : '',
                     userNote: modalBook.userNote || '',
-                    onWishlist: isWishlisted(modalBook), // v7.8.0 - form seeds from truth accessor
+                    // v7.8.0-alpha.3 - seed with the current state: user states select themselves,
+                    // an Amazon fact selects the 'keep' option (OWNERSHIP-MODEL.md §4)
+                    ownership: (() => { const t = getOwnershipType(modalBook); return (t === 'purchased' || t === 'wishlist') ? t : 'keep'; })(),
                     binding: modalBook.binding || '' // v7.7.0-alpha.13
                 });
                 setEditBookSeriesDropdownOpen(false);
@@ -6291,7 +6297,7 @@
 
             const cancelEditMode = () => {
                 setIsEditingBook(false);
-                setEditBookFields({ title: '', author: '', series: '', seriesPosition: '', userNote: '', onWishlist: false, binding: '' });
+                setEditBookFields({ title: '', author: '', series: '', seriesPosition: '', userNote: '', ownership: 'keep', binding: '' });
                 setEditBookSeriesDropdownOpen(false);
             };
 
@@ -6334,12 +6340,31 @@
                     previousValues.binding = oldBinding;
                     newValues.binding = newBinding;
                 }
-                // v5.4.8 - Ownership toggle
-                if (editBookFields.onWishlist !== isWishlisted(modalBook)) {
+                // v5.4.8 ownership toggle → v7.8.0-alpha.3 (OWNERSHIP-MODEL.md §4): the dropdown offers
+                // the current Amazon fact ('keep' = no-op), the two user states, and Reset when a
+                // snapshot exists. Manual override snapshots the pre-edit fact into
+                // lastAmazonOwnershipType (first override only; 'wishlist' is a user state — nothing
+                // to restore); Reset restores it instantly and clears the userEdited protection.
+                let clearOwnershipProtection = false;
+                const currentOtype = getOwnershipType(modalBook);
+                if (editBookFields.ownership === 'reset' && modalBook.lastAmazonOwnershipType) {
+                    previousValues.ownershipType = modalBook.ownershipType || 'purchased';
+                    previousValues.onWishlist = isWishlisted(modalBook);
+                    previousValues.lastAmazonOwnershipType = modalBook.lastAmazonOwnershipType;
+                    newValues.ownershipType = modalBook.lastAmazonOwnershipType;
+                    newValues.onWishlist = false; // snapshots are Amazon facts, never wishlist
+                    newValues.lastAmazonOwnershipType = undefined;
+                    clearOwnershipProtection = true;
+                } else if ((editBookFields.ownership === 'purchased' || editBookFields.ownership === 'wishlist')
+                           && editBookFields.ownership !== currentOtype) {
                     previousValues.onWishlist = isWishlisted(modalBook);
                     previousValues.ownershipType = modalBook.ownershipType || 'purchased';
-                    newValues.onWishlist = editBookFields.onWishlist;
-                    newValues.ownershipType = editBookFields.onWishlist ? 'wishlist' : 'purchased';
+                    newValues.onWishlist = editBookFields.ownership === 'wishlist';
+                    newValues.ownershipType = editBookFields.ownership;
+                    if (!modalBook.lastAmazonOwnershipType && currentOtype !== 'wishlist') {
+                        previousValues.lastAmazonOwnershipType = undefined;
+                        newValues.lastAmazonOwnershipType = modalBook.ownershipType || 'purchased';
+                    }
                 }
 
                 if (Object.keys(newValues).length === 0) {
@@ -6348,8 +6373,9 @@
                     return;
                 }
 
-                // v5.4.7 - Build userEdited flags for changed fields
-                const editedFields = Object.keys(newValues).filter(k => k !== 'userNote' && k !== 'ownershipType');
+                // v5.4.7 - Build userEdited flags for changed fields (ownershipType rides
+                // userEdited.onWishlist; the snapshot field is bookkeeping, never a user edit)
+                const editedFields = Object.keys(newValues).filter(k => k !== 'userNote' && k !== 'ownershipType' && k !== 'lastAmazonOwnershipType');
                 const userEditedUpdate = editedFields.length > 0
                     ? editedFields.reduce((acc, k) => { acc[k] = true; return acc; }, {})
                     : null;
@@ -6361,6 +6387,12 @@
                         const updatedBook = { ...b, ...newValues };
                         if (userEditedUpdate) {
                             updatedBook.userEdited = { ...(b.userEdited || {}), ...userEditedUpdate };
+                        }
+                        if (clearOwnershipProtection && updatedBook.userEdited) {
+                            // Reset-to-Amazon: drop the protection so future fetches own this field again
+                            const ue = { ...updatedBook.userEdited };
+                            delete ue.onWishlist;
+                            updatedBook.userEdited = ue;
                         }
                         return updatedBook;
                     });
@@ -12644,33 +12676,9 @@
                                                     title="View on Amazon">{modalBook.title}</a>
                                             )}
                                             {isEditingBook ? (
+                                                /* v7.8.0-alpha.3 (OWNERSHIP-MODEL.md §4) - Ownership + Format now edit IN PLACE in
+                                                   their labeled rows below; the disguised top-of-dialog duplicates are gone. */
                                                 <div className="mb-3 flex items-center gap-3">
-                                                    <select
-                                                        value={editBookFields.onWishlist ? 'wishlist' : 'purchased'}
-                                                        onChange={(e) => setEditBookFields(prev => ({ ...prev, onWishlist: e.target.value === 'wishlist' }))}
-                                                        onKeyDown={(e) => e.stopPropagation()}
-                                                        title="Mark as Owned or on Wishlist"
-                                                        className={`px-3 py-1 rounded-full text-sm font-medium border cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                                                            editBookFields.onWishlist
-                                                                ? 'bg-amber-100 text-amber-800 border-amber-300'
-                                                                : 'bg-green-100 text-green-800 border-green-300'
-                                                        }`}
-                                                    >
-                                                        <option value="purchased">Owned</option>
-                                                        <option value="wishlist">Wishlist Item</option>
-                                                    </select>
-                                                    {/* v7.7.0-alpha.13 - FORMAT POLICY: user-editable Format (fixes "Shoes",
-                                                        fills blanks); suggestions from the library's own vocabulary */}
-                                                    <input type="text" value={editBookFields.binding} list="rw-format-options"
-                                                        onChange={(e) => setEditBookFields(prev => ({ ...prev, binding: e.target.value }))}
-                                                        onKeyDown={(e) => { e.stopPropagation(); if (e.key === 'Enter' || e.key === 'Escape') e.target.blur(); }}
-                                                        placeholder="Format (blank = unknown)"
-                                                        title="Book format, e.g. Kindle Edition — editable because Amazon sometimes gets it wrong"
-                                                        className="px-3 py-1 rounded-full text-sm border border-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-500 w-44"
-                                                    />
-                                                    <datalist id="rw-format-options">
-                                                        {[...new Set(['Kindle Edition', 'Paperback', 'Hardcover', 'Audible Audiobook', ...books.map(b => b.binding).filter(Boolean)])].sort().map(f => <option key={f} value={f} />)}
-                                                    </datalist>
                                                     {/* v4.17.0.k - View on Amazon button */}
                                                     {(() => {
                                                         const atGoal = modalBook.priceTrigger != null && modalBook.currentPrice != null && modalBook.currentPrice <= modalBook.priceTrigger;
@@ -12892,20 +12900,57 @@
                                             )}
 
                                             <div className="space-y-2 text-sm">
-                                                {modalBook.binding && (
+                                                {/* v7.8.0-alpha.3 (OWNERSHIP-MODEL.md §4) - Format edits IN PLACE (FORMAT POLICY:
+                                                    free text, blank = honest unknown, suggestions from the library's vocabulary) */}
+                                                {(isEditingBook || modalBook.binding) && (
                                                     <div className="flex items-center gap-2">
                                                         <span className="font-semibold text-gray-700">Format:</span>
-                                                        <span className="text-gray-600">{modalBook.binding}</span>
+                                                        {isEditingBook ? (
+                                                            <>
+                                                                <input type="text" value={editBookFields.binding} list="rw-format-options"
+                                                                    onChange={(e) => setEditBookFields(prev => ({ ...prev, binding: e.target.value }))}
+                                                                    onKeyDown={(e) => { e.stopPropagation(); if (e.key === 'Enter' || e.key === 'Escape') e.target.blur(); }}
+                                                                    placeholder="blank = unknown"
+                                                                    title="Book format, e.g. Kindle Edition — editable because Amazon sometimes gets it wrong"
+                                                                    className="px-2 py-1 border border-blue-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-44"
+                                                                />
+                                                                <datalist id="rw-format-options">
+                                                                    {[...new Set(['Kindle Edition', 'Paperback', 'Hardcover', 'Audible Audiobook', ...books.map(b => b.binding).filter(Boolean)])].sort().map(f => <option key={f} value={f} />)}
+                                                                </datalist>
+                                                            </>
+                                                        ) : (
+                                                            <span className="text-gray-600">{modalBook.binding}</span>
+                                                        )}
                                                     </div>
                                                 )}
-                                                {/* v6.12.0 - Ownership/acquisition type (badge for non-purchased, muted for purchased) */}
+                                                {/* v6.12.0 - Ownership/acquisition type (badge for non-purchased, muted for purchased)
+                                                    v7.8.0-alpha.3 (OWNERSHIP-MODEL.md §4) - edits IN PLACE: the dropdown shows the
+                                                    current Amazon fact and offers only the two user states (+ Reset when a snapshot
+                                                    of the pre-override fact exists). */}
                                                 {(() => {
                                                     const otype = getOwnershipType(modalBook);
                                                     const meta = OWNERSHIP_META[otype] || OWNERSHIP_META.unknown;
                                                     return (
                                                         <div className="flex items-center gap-2">
                                                             <span className="font-semibold text-gray-700">Ownership:</span>
-                                                            {meta.badge ? (
+                                                            {isEditingBook ? (
+                                                                <select
+                                                                    value={editBookFields.ownership}
+                                                                    onChange={(e) => setEditBookFields(prev => ({ ...prev, ownership: e.target.value }))}
+                                                                    onKeyDown={(e) => e.stopPropagation()}
+                                                                    title="Amazon reports what you hold. Set Owned if you actually bought it, or Wishlist if you only want it."
+                                                                    className="px-2 py-1 border border-blue-300 rounded text-sm cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                                >
+                                                                    {otype !== 'purchased' && otype !== 'wishlist' && (
+                                                                        <option value="keep">{meta.label} (from Amazon)</option>
+                                                                    )}
+                                                                    <option value="purchased">Owned</option>
+                                                                    <option value="wishlist">Wishlist</option>
+                                                                    {modalBook.lastAmazonOwnershipType && (
+                                                                        <option value="reset">Reset to Amazon's value ({(OWNERSHIP_META[modalBook.lastAmazonOwnershipType] || OWNERSHIP_META.unknown).label})</option>
+                                                                    )}
+                                                                </select>
+                                                            ) : meta.badge ? (
                                                                 <span className={`${meta.badge} text-white text-xs font-bold rounded px-2 py-0.5`}>{meta.label}</span>
                                                             ) : (
                                                                 <span className="text-gray-400">{meta.label}</span>
@@ -18626,7 +18671,7 @@
                                                         series: book.series || '',
                                                         seriesPosition: book.seriesPosition != null ? String(book.seriesPosition) : '',
                                                         userNote: book.userNote || '',
-                                                        onWishlist: isWishlisted(book), // v7.8.0 - form seeds from truth accessor
+                                                        ownership: (() => { const t = getOwnershipType(book); return (t === 'purchased' || t === 'wishlist') ? t : 'keep'; })(), // v7.8.0-alpha.3 (OWNERSHIP-MODEL.md §4)
                                                         binding: book.binding || '' // v7.7.0-alpha.14 - this inline duplicate of enterEditMode missed alpha.13's new field: saving threw at binding.trim() (silent edit failure)
                                                     });
                                                     setIsEditingBook(true);
