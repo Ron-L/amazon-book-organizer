@@ -66,6 +66,10 @@ _(The old menu had "Edit ▸" always show an arbitrary 4-field subset, "Add Note
 
 ## Ownership model: Amazon's facts vs the one bit you own
 
+> **2026-09-07: extended and partially superseded by docs/design/OWNERSHIP-MODEL.md** (onWishlist
+> retirement, transition matrix, dialog edit-in-place redesign, lastAmazonOwnershipType). This
+> section remains accurate on menu structure; for ownership semantics the new doc wins.
+
 Ownership has **many types** — Owned (bought), Prime, Kindle Unlimited, KOLL, Sample, Borrowed, Comixology, Inside Amazon — plus **Wishlist**. Crucially:
 
 - **The types are read-only Amazon facts.** The fetcher derives `ownershipType` from your library relationship. They're not preferences; you can't (and shouldn't) hand-set "this is Prime" — it'd fabricate a fact, and the next fetch would re-derive it anyway. So there's **no UI to set them**, only to view/filter them.
