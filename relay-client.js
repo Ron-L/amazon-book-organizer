@@ -622,7 +622,7 @@
    *   listing keys; no need to fetch/decrypt letters the ledger says to ignore).
    * @returns {object} { runs: [{runId, kind, fetchDate, timestamp, parts, jsonString}], incomplete: [runId],
    *   absorbedPresent: [{runId, parts}] } — absorbedPresent lists skipped (ledger-absorbed) runs whose
-   *   letters still occupy KV: reclamation candidates (v7.8.0 — reclamation used to get exactly one
+   *   letters still occupy KV: reclamation candidates (v7.7.2 — reclamation used to get exactly one
    *   attempt, in the fire-and-forget consolidation of the import that absorbed a run; a tab closed
    *   early stranded ~17MB per bulk run until its 90d TTL).
    */

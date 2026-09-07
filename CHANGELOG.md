@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [7.7.2] - 2026-09-07
+
+### Fixed: cloud cleanup no longer gets just one chance
+- After a sync consolidation, the multi-megabyte upload bundles it absorbed are deleted in a background pass — but only ever by the *same* session that absorbed them. Close the tab a moment too soon and those bundles sat in the cloud untouched for their full 90-day lifetime, a few hundred MB in a heavy week. Every import now re-checks for absorbed leftovers and clears them, whichever session left them behind. First live run reclaimed 27 stranded bundles in one pass.
+
 ## [7.7.1] - 2026-09-07
 
 ### Fixed: the Auto-Organize "Already filed" wall of rows

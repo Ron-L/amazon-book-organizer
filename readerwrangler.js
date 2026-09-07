@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "7.8.0-alpha.1";  // Build version for this file
+        const ORGANIZER_VERSION = "7.7.2";  // Build version for this file
 
         // v6.19.0 - Dev environments talk to the DEV relay worker (isolated KV namespace), so
         // local/dev testing can never touch production relay data. Mirrors the nav-hub's rule,
@@ -4806,7 +4806,7 @@
                                 absorbedPending: pending.map(r => ({ runId: r.runId, parts: r.parts || 1 }))
                             };
                         }
-                        // v7.8.0 (batch item 10) - Reclamation RETRY: absorbed multi-part runs that survived
+                        // v7.7.2 (batch item 10) - Reclamation RETRY: absorbed multi-part runs that survived
                         // their birth import's best-effort delete (tab closed before the fire-and-forget loop
                         // finished — one chance was all they got) get another attempt on EVERY import. Safe by
                         // construction: absorbedPresent only ever lists ledger-absorbed runs.
@@ -4861,7 +4861,7 @@
                             }
                         })();
                     }
-                    // v7.8.0 (batch item 10) - Retry reclamation for PREVIOUSLY absorbed runs still occupying
+                    // v7.7.2 (batch item 10) - Retry reclamation for PREVIOUSLY absorbed runs still occupying
                     // KV (their birth import's delete loop was cut off). Best-effort background task; the
                     // multi-part filter lives inside deleteAbsorbedBulkRuns (tiny singles ride the TTL).
                     if (result.__reclaimAbsorbed && result.__reclaimAbsorbed.length > 0) {
