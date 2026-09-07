@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [7.7.1] - 2026-09-07
+
+### Fixed: the Auto-Organize "Already filed" wall of rows
+- The preview's "Already filed" section rendered one full-width row per book — fine for the usual two or three, a skyscraper when a whole author backlog (25 Heinleins) turned up already filed. It now groups books by their home folder: one line of green folder chips with a count, covers wrapping beneath, matching the layout language of the "Will organize" section above it. Selection, hover previews, and the right-click menu all work as before.
+
 ## [7.7.0] - 2026-09-04
 
 ### One home for your organization
