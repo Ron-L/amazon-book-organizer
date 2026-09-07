@@ -620,7 +620,11 @@
    * @param {object} opts - optional { skipRunIds: Set } — runs already absorbed by the live
    *   generation are skipped BEFORE any letter download (their run ids are visible in the
    *   listing keys; no need to fetch/decrypt letters the ledger says to ignore).
-   * @returns {object} { runs: [{runId, kind, fetchDate, timestamp, parts, jsonString}], incomplete: [runId] }
+   * @returns {object} { runs: [{runId, kind, fetchDate, timestamp, parts, jsonString}], incomplete: [runId],
+   *   absorbedPresent: [{runId, parts}] } — absorbedPresent lists skipped (ledger-absorbed) runs whose
+   *   letters still occupy KV: reclamation candidates (v7.8.0 — reclamation used to get exactly one
+   *   attempt, in the fire-and-forget consolidation of the import that absorbed a run; a tab closed
+   *   early stranded ~17MB per bulk run until its 90d TTL).
    */
   async function readMailbox(onProgress, opts) {
     if (!isConfigured()) throw new Error('Relay not configured');
@@ -632,10 +636,14 @@
     const keys = (await listRes.json()).keys; // "{runId}:{seq}" or "{runId}:manifest"
 
     const byRun = new Map();
+    const skippedParts = new Map(); // runId -> letter-key count (absorbed but still in KV)
     for (const k of keys) {
       const sep = k.lastIndexOf(':');
       const runId = k.slice(0, sep), part = k.slice(sep + 1);
-      if (skip && skip.has(runId)) continue; // absorbed — the ledger says to ignore it
+      if (skip && skip.has(runId)) { // absorbed — the ledger says to ignore it (but it still occupies storage)
+        skippedParts.set(runId, (skippedParts.get(runId) || 0) + (part === 'manifest' ? 0 : 1));
+        continue;
+      }
       if (!byRun.has(runId)) byRun.set(runId, { seqs: new Set(), hasManifest: false });
       if (part === 'manifest') byRun.get(runId).hasManifest = true;
       else byRun.get(runId).seqs.add(parseInt(part, 10));
@@ -680,7 +688,8 @@
 
     runs.sort((a, b) => a.timestamp - b.timestamp); // oldest first (merge in arrival order)
     notify('complete', `${runs.length} run${runs.length !== 1 ? 's' : ''} in mailbox`);
-    return { runs, incomplete };
+    const absorbedPresent = Array.from(skippedParts, ([runId, parts]) => ({ runId, parts }));
+    return { runs, incomplete, absorbedPresent };
   }
 
   /** Filter mailbox runs down to those NOT absorbed by the given generation manifest. */
