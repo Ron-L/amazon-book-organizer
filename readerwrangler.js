@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "7.8.0-alpha.1";  // Build version for this file
+        const ORGANIZER_VERSION = "7.8.0-alpha.2";  // Build version for this file
 
         // v6.19.0 - Dev environments talk to the DEV relay worker (isolated KV namespace), so
         // local/dev testing can never touch production relay data. Mirrors the nav-hub's rule,
@@ -10697,7 +10697,10 @@
                                     <img src="icons/logo-transparent.png" alt="ReaderWrangler" className="about-logo" style={{ width: '200px', height: '200px', margin: '0 auto' }} />
                                     <p className="text-sm text-gray-600">Wrangle your Kindle library with power and precision</p>
                                     <div className="text-sm text-gray-700 border-t border-gray-200 pt-4">
-                                        <p className="font-semibold"><a href="changelog.html" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 hover:underline">Version {APP_VERSION}</a></p>
+                                        {/* v7.8.0-alpha.2 - Help/About always names the running BUILD (ORGANIZER_VERSION is the
+                                            single source of truth for it); the release Version is shown alongside when they differ,
+                                            so an alpha can never masquerade as the release it forked from (Ron, 2026-09-07). */}
+                                        <p className="font-semibold"><a href="changelog.html" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 hover:underline">Version {APP_VERSION}</a>{ORGANIZER_VERSION !== APP_VERSION && <span className="font-normal text-gray-500"> · Build v{ORGANIZER_VERSION}</span>}</p>
                                         <p className="mt-2">Copyright © 2025, 2026 <a href="https://AlloidLabs.com" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 hover:underline">AlloidLabs.com</a></p>
                                     </div>
                                     <div className="text-sm text-gray-600 border-t border-gray-200 pt-4 text-left">
