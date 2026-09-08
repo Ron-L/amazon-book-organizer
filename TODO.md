@@ -11,11 +11,9 @@
 
 ## ⏸️ Ownership-honesty batch (ratified 2026-09-04, HELD — awaiting Ron's go; likely 7.8.0)
 
-Order: item 0 first ✓ (shipped in alphas 1-5 with the dialog/undo work), then **item 11 NEXT** (Ron 2026-09-08), then 1-9.
-Item 10 (reclamation retry) SHIPPED early as **7.7.2** (2026-09-07, proven live: dev reclaimed 27 runs;
-prod proof outstanding — first prod import should log `🧹 Reclaimed 7 absorbed bulk run(s)`, ~124MB).
-
-- [ ] **0. Retire `onWishlist` as a decision source** (Ron's proposal, decided 2026-09-04) — single accessor `isWishlisted(book)` ⇒ `ownershipType === 'wishlist'`; ALL ~91 reads/decisions across app/mobile/storage/fetchers key on ownershipType only; stop maintaining the couple. Two survivals, forever: (a) inbound normalization — `onWishlist:true` + no real type ⇒ `ownershipType='wishlist'` (migration-doctrine pair; stored fields left as inert baggage, not scrubbed); (b) wishlist-add fetcher keeps emitting its literal `onWishlist:true` (write-only constant — old PASTED library fetchers guard the orphan scan with `!b.onWishlist`; without it, bookmarklet skew would orphan-flag wishlist books). `userEdited.onWishlist` keeps its key name. Invariant that motivated this: onWishlist ⟺ ownershipType==='wishlist' never legitimately diverged — the flag was pure trap (bit twice).
+Shipped so far: item 0 + ownership-dialog redesign + undo fence + undo-toast naming → **7.8.0** (2026-09-08);
+item 10 → **7.7.2** (2026-09-07; prod proof outstanding — first prod import on ≥7.7.2 should log
+`🧹 Reclaimed 7 absorbed bulk run(s)`, ~124MB). **Item 11 NEXT** (new branch), then 1-9.
 - [ ] **1. Fetcher completion dialog reports ownership upgrades** (today: console-only ⬆️; dialog says "0 new" after you buy 4 books)
 - [ ] **2. Import summary counts ALL ownership promotions, labeled by destination** — "3 wishlist → owned", "1 wishlist → sample" — keyed on ownershipType transitions (today: onWishlist-flip only ⇒ misses sample→owned AND would mislabel wishlist→sample as owned). Also: name the titles in the console line (the 🎉-line-has-no-title gap that blocked diagnosis 2026-09-04).
 - [ ] **3. Goals on promotion: KEEP (old rule stands — never silently destroy)** + receipt line; optional one-click "Clear goals on these N" in the import summary (Ron to pick during build). Rationale: promoted books already require a manual All-Books visit to file into reading lists, so clearing rides a trip he makes anyway (Ron 2026-09-04).

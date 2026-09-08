@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [7.8.0] - 2026-09-08
+
+### The book dialog edits where it says
+- **Format and Ownership now edit in place**, in their labeled rows — no more hunting: the disguised pill and the teleporting Format box at the top of edit mode are gone. (Field-tested by the only user, who concluded ownership wasn't editable at all. The control was there — disguised as a badge. That's a UI bug even when the code works.)
+- **The Ownership dropdown tells the truth**: it shows the book's actual state — *Sample (from Amazon)* — and offers only what's genuinely yours to set: **Owned** ("I have it, Amazon's record is stale") and **Wishlist** ("I want it"). No more two-option toggle wearing the wrong state on a Sample book.
+- **Overrides are reversible, visibly**: manually setting ownership snapshots Amazon's value first, and the dropdown then offers *"Reset to Amazon's value (Sample)"* — instant, on-screen, no waiting for a background sync. (Full model: docs/design/OWNERSHIP-MODEL.md.)
+
+### Undo grows up around the dialog
+- **Ctrl+Z now works while the book dialog is open** — undo your just-saved edit and watch it revert in place. Previously the dialog silently ate the keystroke.
+- **…but only within this book's session.** Actions from before the dialog opened — or edits to a *different* book you navigated away from — can't be popped invisibly behind the modal. When there's nothing in-session to undo, the key says so instead of playing dead. (The full three-level model — field, dialog, global — is in docs/design/UNDO-MODEL.md.)
+- **Every undo/redo toast names its target**: *"Undone: Edit 'Bitter Gold Hearts'"*, *"Undid: Hide 'Red Cell'"*, bulk actions with honest counts — verified complete by a mechanical audit of every undo site.
+
+### Under the hood
+- **One source of truth for wishlist status** (`ownershipType`) across the app, mobile, storage, and all fetchers — retiring a redundant legacy flag that misled two investigations. Old backups and bookmarklets keep working via permanent inbound normalization. (Library fetcher v5.4.0, wishlist fetcher v2.0.2, Mobile 1.8.1.)
+- Help/About now shows the running **build** whenever it differs from the release version — an alpha can never masquerade as its parent release.
+
 ## [7.7.2] - 2026-09-07
 
 ### Fixed: cloud cleanup no longer gets just one chance
