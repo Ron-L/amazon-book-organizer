@@ -2,6 +2,15 @@
 
 _Moved verbatim from TODO.md during the 6.12.0 TODO restructure (2026-08-03). Backlog. Design 2026-06-22. **MEDIUM / MEDIUM-HIGH.**_
 
+> **2026-09-08: SUPERSEDED by AUTO-ORGANIZE-UNIFIED.md §9.** This doc's chosen design is dead
+> twice over: it parses author strings (split on `,`/`&`) — forbidden by the NEVER-parse rule
+> ratified in the 6.17.0 era — and it files a book under EACH parsed author, which contradicts
+> Ron's actual model ("a combo I don't collect separately is, to me, the lead author's book").
+> The replacement: whole-string grouping stays; corrections are human and per-case via the
+> unified dialog's "File under…" retargeting (other group / existing folder / new folder /
+> Inbox). The `filedAuthors` machinery is dead with it. The problem statement and the
+> threshold-undercount analysis below remain as history.
+
 ---
 
 **Problem:** Auto-Organize by Author groups by the FULL author string (`normalizeAuthor` = trim+lowercase of `book.author`, ~L3144), so a collaboration ("Larry Niven, Jerry Pournelle") is a separate group from solo "Larry Niven". An author who mostly co-writes (e.g. Niven) never reaches the threshold even with 20+ books, because the count is split across collaboration strings. Real hit: 22 "niven" books, 0 authors shown at 17+.

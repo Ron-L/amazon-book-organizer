@@ -99,7 +99,39 @@ everywhere; "Consolidate N books" dies with the mode that named it.
 - Undo: stays ONE `WIZARD_ORGANIZE` compound (positional restore incl. removed memberships),
   label per UNDO-MODEL naming ("Organized 6 books for Wesley Chu").
 
-## 9. Test plan sketch (at build time, precise values per Rule 4)
+## 9. Retargeting — "File under…" (designed 2026-09-08, second session)
+
+The dialog is, in Ron's framing, *the organization filtered to these authors (hide-empty) plus
+suggested moves*. Corrections therefore need full move power — delivered through ONE consistent
+control, not free drag: a **"File under…" menu** on any group header, any selection, any single
+book — **including already-home books**. Targets:
+
+1. any other **group** in the preview,
+2. any **existing folder** (picker),
+3. **➕ New folder…** (named in place — covers "create `Niven, Pournelle` when AO proposed
+   filing the co-authored books under plain `Niven`", and first-ever authors),
+4. **Inbox** (demote a mis-filed book back out, even from a real author folder).
+
+The canonical case (Ron's live one): AO proposes group "Larry Niven, Jerry Pournelle, Steven
+Barnes" — he collects the duo but not Barnes solo → File under… → existing folder "Larry Niven,
+Jerry Pournelle". One click, whole group.
+
+**Author strings are NEVER parsed** (standing rule, ratified 6.17.0-era, re-confirmed 2026-09-08):
+grouping is the whole trimmed/lowercased string — a comma in a folder name means the *string*
+contains a comma, not that anything was split. Correction is human, per case, via this menu.
+
+**Persistent aliases: REJECTED (2026-09-08).** "Always file 'A, B' under A" was proposed and
+withdrawn — a stored rule that fires invisibly, with no surface to see or delete it, silently
+misfiles the day "Niven, Pournelle, Chu" appears. It is the same disease as the invisible Reset
+flag and the six-pixel scope toggle. Case-by-case retargeting suffices because filed books don't
+re-propose — only NEW arrivals of a compound string need the click. If repetition ever genuinely
+bites, an alias may return ONLY with a visible manager + an in-dialog "aliased → X (change)"
+badge at the point of effect. Free drag between groups: stretch goal, menu first.
+
+Supersedes AUTO-ORGANIZE-COAUTHORS.md's chosen design (author-string parsing + filedAuthors —
+both dead; its problem statement and threshold-undercount analysis remain as history).
+
+## 10. Test plan sketch (at build time, precise values per Rule 4)
 
 Wesley Chu fixture (Ron's live case): Wishlist folder = 1 book, Inbox strays = 5, expect: dialog
 opens with 1 checked / 5 visible-unchecked with `⌂ Inbox` captions; Select all → button reads
