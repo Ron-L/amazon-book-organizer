@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "7.8.0-alpha.4";  // Build version for this file
+        const ORGANIZER_VERSION = "7.8.0-alpha.5";  // Build version for this file
 
         // v6.19.0 - Dev environments talk to the DEV relay worker (isolated KV namespace), so
         // local/dev testing can never touch production relay data. Mirrors the nav-hub's rule,
@@ -8100,7 +8100,7 @@
                 setFolders(prev => prev.map(f => f.id === folderId
                     ? { ...f, bookIds: (f.bookIds || []).filter(id => !present.includes(id)) }
                     : f));
-                recordAction({ type: 'REMOVE_BOOKS_FOLDER', folderId, bookIds: present, fromIndices, label });
+                recordAction({ type: 'REMOVE_BOOKS_FOLDER', folderId, bookIds: present, fromIndices, label: label || `Remove ${bookCountLabel(present)} from '${folder.name}'` }); // v7.8.0-alpha.5 named default
                 return present.length;
             };
             // v6.16.0 - The single footer action, driven by the ONE selection: organize the SELECTED movers and/or
@@ -18539,7 +18539,8 @@
                                                     type: 'PASTE_BOOKS_CUT',
                                                     bookIds: clipboard.bookIds,
                                                     sourcePositions: clipboard.sourcePositions,
-                                                    targetFolderId
+                                                    targetFolderId,
+                                                    label: `Move ${bookCountLabel(clipboard.bookIds)} to '${(folders.find(f => f.id === targetFolderId) || {}).name || 'folder'}'` // v7.8.0-alpha.5 named target (missed site)
                                                 });
 
                                                 setClipboard(null);
@@ -18560,7 +18561,8 @@
                                                 recordAction({
                                                     type: 'PASTE_BOOKS_COPY',
                                                     bookIds: clipboard.bookIds,
-                                                    targetFolderId
+                                                    targetFolderId,
+                                                    label: `Copy ${bookCountLabel(clipboard.bookIds)} to '${(folders.find(f => f.id === targetFolderId) || {}).name || 'folder'}'` // v7.8.0-alpha.5 named target (missed site)
                                                 });
                                             }
 
@@ -19196,7 +19198,8 @@
                                                                 type: 'TOGGLE_HIDE',
                                                                 bookIds: bookIdsToToggle,
                                                                 previousStates: previousStates,
-                                                                newState: newHiddenState
+                                                                newState: newHiddenState,
+                                                                label: `${newHiddenState ? 'Hide' : 'Unhide'} ${bookCountLabel(bookIdsToToggle)}` // v7.8.0-alpha.5 named target (missed site)
                                                             });
 
                                                             setExplorerBookContextMenu(null);
