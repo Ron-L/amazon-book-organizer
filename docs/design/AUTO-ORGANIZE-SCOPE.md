@@ -1,6 +1,12 @@
 # Auto-Organize scope — organize the *current folder*, not just the Inbox
 
-_Design + plan. Drafted 2026-08-06. For review before build._
+_Design + plan. Drafted 2026-08-06. Shipped 6.14.0._
+
+> **2026-09-08: partially superseded by AUTO-ORGANIZE-UNIFIED.md.** The This-folder scope
+> BOUNDARY this doc introduced is deleted (the mode toggle dies with it); its safety principle
+> (never de-organize; act on what the user is looking at) survives as the unified view's
+> DEFAULT SELECTION and removal defaults (UNIFIED §2/§4). The de-organize guard analysis here
+> remains the reference for `wouldDeOrganize`.
 
 ## Problem
 Right-click Auto-Organize gathers candidates from `inboxSourceBooks()` — **books that are in no folder** (the Inbox / unfiled set) — regardless of where you invoked it ([readerwrangler.js:6922](../../readerwrangler.js#L6922), used by `buildAuthorGroupsFromSelection` at [:6931](../../readerwrangler.js#L6931)).

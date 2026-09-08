@@ -1,6 +1,10 @@
 # Auto-Organize from a right-click (book-anchored, bottom-up)
 
-_Design/scope for the HIGH-priority "Next" item. Draft 2026-08-04 — for review before implementation._
+_Design/scope for the HIGH-priority "Next" item. Draft 2026-08-04. Shipped 6.13.0._
+
+> **2026-09-08: still the reference for entry points and the bottom-up philosophy**, but the
+> preview's VIEW semantics (modes, scope, selection, trays) are superseded by
+> **AUTO-ORGANIZE-UNIFIED.md** — one view, selection is the scope.
 
 ---
 
