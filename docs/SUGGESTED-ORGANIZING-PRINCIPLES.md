@@ -32,6 +32,7 @@ use a **Saved Search**, never a hand-fed copy of the same fact.
 | **Wishlist book** | **Its future folder, now** — the ownership upgrade keeps folder/tags/price goal on purchase, so purchase day is zero work. Bonus: series folders show ownership gaps honestly. | Visibility = **Saved Search (Ownership: Wishlist)**. Curated priorities = a **Buy Next** Book List. **Never** a Wishlist folder or a hand-maintained full-wishlist list. |
 | **Sample, probably buying** | Home it like a wishlist book — sample→purchase upgrades in place, same ASIN, no rework | Ownership badge says Sample until then |
 | **Sample, genuine audition** | **Inbox** (it's a pending decision — the Inbox is *for* undecided things) or a **Samples to Try** Book List | Verdict: buy → home it; reject → next row ↓ |
+| **Borrowed (Prime / KU / Library Loan / Audible Plus)** | A borrow is a **sample with a clock** — same intent split: reading seriously / might buy → **its future folder, now** (a later purchase upgrades in place, keeping folder/tags/goal — set a price goal if buying is plausible); grabbed on a whim → **Inbox** or the audition list | Ownership badge says Prime / KU / etc. On **return**, see the Orphan-sweep fork below |
 | **Rejected sample** | Delete it **on Amazon** (Kindle + account). It does *not* vanish from RW — next fetch **orphan-flags** it. | Periodic **🔍 Orphan sweep** (below) |
 | Finished book | **Stays put.** | **Delete it from its To Read list.** Also: Amazon **Read** collection drives the Read / Uncollected Saved Searches. |
 
@@ -42,6 +43,10 @@ use a **Saved Search**, never a hand-fed copy of the same fact.
 - **Finishing a book = one delete** (from its list). Nothing moves. Ever.
 - **Periodic 🔍 Orphan sweep** — the Orphan filter does the remembering: open it occasionally, review, delete
   the dead samples/removals → Trash → **Empty Trash** (tombstones them so no fetch resurrects them).
+  **Returned borrows land here too** (the return removes them from Amazon's listing; RW deletes nothing).
+  The fork: didn't like it → delete like a rejected sample. **Might buy it someday → ✏️ Ownership →
+  Wishlist** — one dropdown change (7.8.0) turns it into a pre-homed wishlist book: keeps its folder,
+  tags, and price goal, leaves the orphan pool, gets price-watched, and upgrades normally if bought.
 - **Inbox = only the undecided.** New arrivals and auditioning samples. Everything else has a home.
 - **Dissolving a queue-folder**: books need real homes *first* (a Book List is not a home — folderless books
   get swept back to the Inbox). Per batch: select → Add to Book List → then move to homes.
