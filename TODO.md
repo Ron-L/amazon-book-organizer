@@ -13,7 +13,10 @@
 
 Shipped so far: item 0 + ownership-dialog redesign + undo fence + undo-toast naming → **7.8.0** (2026-09-08);
 item 10 → **7.7.2** (2026-09-07; prod proof outstanding — first prod import on ≥7.7.2 should log
-`🧹 Reclaimed 7 absorbed bulk run(s)`, ~124MB). **Item 11 NEXT** (new branch), then 1-9.
+`🧹 Reclaimed 7 absorbed bulk run(s)`, ~124MB).
+**QUEUE JUMP (Ron 2026-09-08): Unified Auto-Organize first** — docs/design/AUTO-ORGANIZE-UNIFIED.md
+(designed + pushed; one view, selection = scope, toggle dies) — live soak pain, builds as the 7.9.0 line.
+Then item 11, then 1-9. (Item 12 — This-folder multi-select repair — mooted by the unification.)
 - [ ] **1. Fetcher completion dialog reports ownership upgrades** (today: console-only ⬆️; dialog says "0 new" after you buy 4 books)
 - [ ] **2. Import summary counts ALL ownership promotions, labeled by destination** — "3 wishlist → owned", "1 wishlist → sample" — keyed on ownershipType transitions (today: onWishlist-flip only ⇒ misses sample→owned AND would mislabel wishlist→sample as owned). Also: name the titles in the console line (the 🎉-line-has-no-title gap that blocked diagnosis 2026-09-04).
 - [ ] **3. Goals on promotion: KEEP (old rule stands — never silently destroy)** + receipt line; optional one-click "Clear goals on these N" in the import summary (Ron to pick during build). Rationale: promoted books already require a manual All-Books visit to file into reading lists, so clearing rides a trip he makes anyway (Ron 2026-09-04).
