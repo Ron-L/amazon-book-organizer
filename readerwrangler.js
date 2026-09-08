@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "7.8.0-alpha.3";  // Build version for this file
+        const ORGANIZER_VERSION = "7.8.0-alpha.4";  // Build version for this file
 
         // v6.19.0 - Dev environments talk to the DEV relay worker (isolated KV namespace), so
         // local/dev testing can never touch production relay data. Mirrors the nav-hub's rule,
@@ -760,6 +760,11 @@
             const undoStackRef = useRef(undoStack); // Ref to avoid stale closure in keyboard handler
             const redoStackRef = useRef(redoStack);
             const modalBookRef = useRef(modalBook); // v4.21.0.g - Ref to check modal state in keyboard handler
+            // v7.8.0-alpha.4 (UNDO-MODEL.md) - dialog undo fence: stack depths at dialog open / ◀▶ nav.
+            // While the dialog is open, undo/redo reach only actions from this book-viewing session.
+            const dialogUndoFenceRef = useRef(0);
+            const dialogRedoFenceRef = useRef(0);
+            const isEditingBookRef = useRef(false); // v7.8.0-alpha.4 - edit mode blocks global undo (Ctrl+Z = text there)
             const anyModalOpenRef = useRef(false); // v5.2.0-alpha.18 - Track any modal open for global key guard
             const autoOrgPreviewRef = useRef(null); // v6.16.0 - current auto-organize preview, for the keydown handler (which doesn't dep on it)
             const backdropMouseDownRef = useRef(null); // v5.2.0-alpha.15 - Track mousedown origin for backdrop close (prevents swipe-past-edge closing modals)
@@ -1300,7 +1305,7 @@
                 const toAdd = bookIds.filter(id => !existing.has(id));
                 if (toAdd.length === 0) return 0;
                 setBookLists(prev => prev.map(b => b.id === bookListId ? { ...b, bookIds: [...(b.bookIds || []), ...toAdd] } : b));
-                recordAction({ type: 'BOOKLIST_ADD', bookListId, bookIds: toAdd }); // v6.12.0 - undoable
+                recordAction({ type: 'BOOKLIST_ADD', bookListId, bookIds: toAdd, label: `Add ${bookCountLabel(toAdd)} to '${bl.name}'` }); // v6.12.0 - undoable; v7.8.0-alpha.4 named target
                 return toAdd.length;
             };
 
@@ -2067,7 +2072,8 @@
                         bookIds: booksToRemoveFromFolder,
                         booksToTrash: actualBooksToTrash,
                         folderMembership,
-                        fromFolderId: currentFolderId
+                        fromFolderId: currentFolderId,
+                        label: `Delete ${bookCountLabel(actualBooksToTrash.length > 0 ? actualBooksToTrash : booksToRemoveFromFolder)}` // v7.8.0-alpha.4 named target
                     });
                 }
                 if (hideInsteadIds.size > 0) {
@@ -2077,7 +2083,8 @@
                         type: 'TOGGLE_HIDE',
                         bookIds: Array.from(hideInsteadIds),
                         previousStates,
-                        newState: true
+                        newState: true,
+                        label: `Hide ${bookCountLabel(Array.from(hideInsteadIds))}` // v7.8.0-alpha.4 named target
                     });
                 }
 
@@ -2139,7 +2146,8 @@
                 recordAction({
                     type: 'RESTORE_BOOKS',
                     bookIds: Array.from(bookIds),
-                    restoredBooks
+                    restoredBooks,
+                    label: `Restore ${bookCountLabel(Array.from(bookIds))}` // v7.8.0-alpha.4 named target
                 });
 
                 setExplorerSelectedItems(new Set());
@@ -2399,7 +2407,7 @@
             // Used by both the right-pane blank-space menu and the always-visible header "+".
             const createFolderHere = (parentId) => {
                 const nf = { id: `folder-${Date.now()}`, name: 'New Folder', parentId: parentId || null, bookIds: [], childFolderIds: [], collapsed: false };
-                recordAction({ type: 'CREATE_FOLDER', folderId: nf.id, parentId: parentId || null, folder: { ...nf } });
+                recordAction({ type: 'CREATE_FOLDER', folderId: nf.id, parentId: parentId || null, folder: { ...nf }, label: `Create folder '${nf.name}'` }); // v7.8.0-alpha.4 named target
                 setFolders(prev => placeNewFoldersAtTop([...prev, nf], [nf])); // v7.6.0-alpha.11 (wave C) - place at top-below-pins
                 navigateToFolder(nf.id);
                 setEditingFolderId(nf.id);
@@ -2545,7 +2553,8 @@
                     folderId: folderId,
                     bookIds: bookIdsToMove,
                     fromIndices: fromIndices,
-                    toIndex: targetIndex
+                    toIndex: targetIndex,
+                    label: `Reorder ${bookCountLabel(bookIdsToMove)}` // v7.8.0-alpha.4 named target
                 });
                 console.log(`🔄 Reordered ${bookIdsToMove.length} book(s) in folder`);
             };
@@ -2565,7 +2574,7 @@
                     remaining.splice(adjustedIndex, 0, ...orderedBooksToMove);
                     return { ...bl, bookIds: remaining };
                 }));
-                recordAction({ type: 'REORDER_BOOKS_BOOKLIST', bookListId, bookIds: bookIdsToMove, fromIndices, toIndex: targetIndex });
+                recordAction({ type: 'REORDER_BOOKS_BOOKLIST', bookListId, bookIds: bookIdsToMove, fromIndices, toIndex: targetIndex, label: `Reorder ${bookCountLabel(bookIdsToMove)} in '${(bookLists.find(b => b.id === bookListId) || {}).name || 'Book List'}'` }); // v7.8.0-alpha.4 named target
             };
 
             // v6.12.0-alpha.57 (G) - Reorder the Book Lists themselves: drop one list onto another → insert at the
@@ -2605,7 +2614,7 @@
                     saveBooksToIndexedDB(updated);
                     return updated;
                 });
-                recordAction({ type: 'SEQUENCE_SERIES', prev, seriesName: name, positions });
+                recordAction({ type: 'SEQUENCE_SERIES', prev, seriesName: name, positions, label: name ? `Number series '${name}'` : 'Number books in current order' }); // v7.8.0-alpha.4 named target
                 showToast(values
                     ? `Set numbers on ${orderedIds.length} book${orderedIds.length !== 1 ? 's' : ''}${name ? ` (series "${name}")` : ''}`
                     : `Numbered ${orderedIds.length} book${orderedIds.length !== 1 ? 's' : ''} in current order${name ? ` (series "${name}")` : ''}`);
@@ -4351,17 +4360,19 @@
                         goForward();
                     }
 
-                    // v4.8.0 - Ctrl+Z: Undo (v4.21.0.g - use ref to check modal state, consume keystroke)
+                    // v4.8.0 - Ctrl+Z: Undo. v7.8.0-alpha.4 (UNDO-MODEL.md) - allowed with the book dialog
+                    // open in VIEW mode (the fence inside undo() scopes it to this session); blocked only
+                    // in EDIT mode, where Ctrl+Z belongs to text (in-field native undo works via stopPropagation).
                     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z' && !e.shiftKey) {
                         e.preventDefault();
-                        if (!modalBookRef.current) undo();
+                        if (!isEditingBookRef.current) undo();
                     }
-                    // v4.8.0 - Ctrl+Y or Ctrl+Shift+Z: Redo (v4.21.0.g - use ref to check modal state, consume keystroke)
+                    // v4.8.0 - Ctrl+Y or Ctrl+Shift+Z: Redo (same gating as undo)
                     // v6.12.0 - toLowerCase(): with Shift held, e.key is 'Z' (uppercase), so the old `e.key === 'z'`
                     // never matched and Ctrl+Shift+Z redo was silently dead. Also handles Caps Lock.
                     if ((e.ctrlKey || e.metaKey) && (e.key.toLowerCase() === 'y' || (e.key.toLowerCase() === 'z' && e.shiftKey))) {
                         e.preventDefault();
-                        if (!modalBookRef.current) redo();
+                        if (!isEditingBookRef.current) redo();
                     }
 
 
@@ -4456,7 +4467,8 @@
                                 type: 'PASTE_BOOKS_CUT',
                                 bookIds: clipboard.bookIds,
                                 sourcePositions: clipboard.sourcePositions,
-                                targetFolderId
+                                targetFolderId,
+                                label: `Move ${bookCountLabel(clipboard.bookIds)} to '${(folders.find(f => f.id === targetFolderId) || {}).name || 'folder'}'` // v7.8.0-alpha.4 named target
                             });
 
                             // Clear clipboard after cut-paste
@@ -4480,7 +4492,8 @@
                             recordAction({
                                 type: 'PASTE_BOOKS_COPY',
                                 bookIds: clipboard.bookIds,
-                                targetFolderId
+                                targetFolderId,
+                                label: `Copy ${bookCountLabel(clipboard.bookIds)} to '${(folders.find(f => f.id === targetFolderId) || {}).name || 'folder'}'` // v7.8.0-alpha.4 named target
                             });
 
                             // Clipboard persists after copy-paste
@@ -4508,7 +4521,7 @@
                             const blForUndo = bookLists.find(b => b.id === blId);
                             const removedIds = (blForUndo?.bookIds || []).filter(id => bookIdsToDelete.includes(id));
                             setBookLists(prev => prev.map(bl => bl.id === blId ? { ...bl, bookIds: (bl.bookIds || []).filter(id => !bookIdsToDelete.includes(id)) } : bl));
-                            if (removedIds.length) recordAction({ type: 'BOOKLIST_REMOVE', bookListId: blId, bookIds: removedIds }); // v6.12.0 - undoable
+                            if (removedIds.length) recordAction({ type: 'BOOKLIST_REMOVE', bookListId: blId, bookIds: removedIds, label: `Remove ${bookCountLabel(removedIds)} from '${(bookLists.find(b => b.id === blId) || {}).name || 'Book List'}'` }); // v6.12.0 - undoable; v7.8.0-alpha.4 named target
                             setExplorerSelectedItems(new Set());
                             return;
                         }
@@ -4701,7 +4714,8 @@
 
                                 recordAction({
                                     type: 'COPY_PASTE_FOLDER',
-                                    newFolderIds: newFolders.map(f => f.id)
+                                    newFolderIds: newFolders.map(f => f.id),
+                                    label: `Copy folder '${newFolders[0].name}'` // v7.8.0-alpha.4 named target
                                 });
                                 // v7.6.0-alpha.11 (wave C) - Strip the sortIndex inherited from the copied source
                                 // (duplicate-position hazard) and PLACE the top copy; descendants keep their structure.
@@ -6406,7 +6420,8 @@
                     type: 'EDIT_BOOK',
                     bookId: modalBook.id,
                     previousValues,
-                    newValues
+                    newValues,
+                    label: `Edit '${(modalBook.title || 'book').slice(0, 40)}'` // v7.8.0-alpha.4 (UNDO-MODEL.md) named target
                 });
 
                 cancelEditMode();
@@ -6495,8 +6510,18 @@
                 redoStackRef.current = redoStack;
             }, [redoStack]);
             useEffect(() => {
+                const prevBook = modalBookRef.current;
                 modalBookRef.current = modalBook;
+                // v7.8.0-alpha.4 (UNDO-MODEL.md) - fence on dialog OPEN and on ◀▶ navigation (each book
+                // is its own session; A→B→A deliberately re-fences — consistency beats cleverness).
+                if (modalBook && (!prevBook || prevBook.id !== modalBook.id)) {
+                    dialogUndoFenceRef.current = undoStackRef.current.length;
+                    dialogRedoFenceRef.current = redoStackRef.current.length;
+                }
             }, [modalBook]);
+            useEffect(() => {
+                isEditingBookRef.current = isEditingBook; // v7.8.0-alpha.4 (UNDO-MODEL.md)
+            }, [isEditingBook]);
             useEffect(() => {
                 autoOrgPreviewRef.current = autoOrgPreview;
             }, [autoOrgPreview]);
@@ -6586,6 +6611,11 @@
                 SOFT_DELETE_BOOKS: 'Delete books', RESTORE_BOOKS: 'Restore books', SEQUENCE_SERIES: 'Number series',
                 TAG_BOOKS_DRAG: 'Tag books', WIZARD_ORGANIZE: 'Auto-Organize', COMPOUND: 'Multiple changes'
             };
+            // v7.8.0-alpha.4 (UNDO-MODEL.md) - toast targets: 1 book → its title, N → the honest count.
+            // Cover view can't show a field reverting; a toast that names its target can be trusted anyway.
+            const bookCountLabel = (ids) => ids.length === 1
+                ? `'${(((books.find(b => b.id === ids[0]) || {}).title) || 'book').slice(0, 40)}'`
+                : `${ids.length} books`;
             // Resolve an action's undo/redo label: explicit label > legacy description > friendly type name (warns if none).
             const actionLabel = (action) => {
                 if (action.label) return action.label;
@@ -7504,6 +7534,12 @@
             const undo = () => {
                 // Use ref to get current stack (avoids stale closure from keyboard handler)
                 const currentStack = undoStackRef.current;
+                // v7.8.0-alpha.4 (UNDO-MODEL.md) - dialog fence: behind a modal, pre-dialog actions are
+                // state you can't see — never pop past the fence. And never a dead key: explain instead.
+                if (modalBookRef.current && currentStack.length <= dialogUndoFenceRef.current) {
+                    showToast('Nothing to undo from this dialog — close it to undo earlier actions');
+                    return;
+                }
                 if (currentStack.length === 0) return;
                 const action = currentStack[currentStack.length - 1];
                 executeUndo(action);
@@ -7515,6 +7551,12 @@
             const redo = () => {
                 // Use ref to get current stack (avoids stale closure from keyboard handler)
                 const currentStack = redoStackRef.current;
+                // v7.8.0-alpha.4 (UNDO-MODEL.md) - fence, symmetric: only redo entries created above it
+                // (i.e., by this dialog session's own undos).
+                if (modalBookRef.current && currentStack.length <= dialogRedoFenceRef.current) {
+                    showToast('Nothing to redo from this dialog — close it to redo earlier actions');
+                    return;
+                }
                 if (currentStack.length === 0) return;
                 const action = currentStack[currentStack.length - 1];
                 executeRedo(action);
@@ -13805,10 +13847,10 @@
                                                                     : b.id === srcListId ? { ...b, bookIds: (b.bookIds || []).filter(id => !dropIds.includes(id)) }
                                                                     : b
                                                                 ));
-                                                                recordAction({ type: 'COMPOUND', actions: [
+                                                                recordAction({ type: 'COMPOUND', label: `Move ${bookCountLabel(dropIds)} to '${bl.name}'`, actions: [
                                                                     { type: 'BOOKLIST_ADD', bookListId: bl.id, bookIds: toAdd },
                                                                     { type: 'BOOKLIST_REMOVE', bookListId: srcListId, bookIds: dropIds }
-                                                                ] });
+                                                                ] }); // v7.8.0-alpha.4 named target
                                                                 showToast(`Moved ${dropIds.length} ${dropIds.length === 1 ? 'book' : 'books'} to "${bl.name}"`, e.clientX, e.clientY);
                                                             } else {
                                                                 const added = addBooksToBookList(bl.id, dropIds);
@@ -13988,7 +14030,8 @@
                                                         type: 'CREATE_FOLDER',
                                                         folderId: newFolder.id,
                                                         parentId: null,
-                                                        folder: { ...newFolder }
+                                                        folder: { ...newFolder },
+                                                        label: `Create folder '${newFolder.name}'` // v7.8.0-alpha.4 named target
                                                     });
                                                     setFolders(prev => placeNewFoldersAtTop([...prev, newFolder], [newFolder])); // v7.6.0-alpha.11 (wave C)
                                                     navigateToFolder(newFolder.id);
@@ -14563,7 +14606,8 @@
                                                                             type: 'CREATE_FOLDER',
                                                                             folderId: newFolder.id,
                                                                             parentId: folder.id,
-                                                                            folder: { ...newFolder }
+                                                                            folder: { ...newFolder },
+                                                                            label: `Create folder '${newFolder.name}'` // v7.8.0-alpha.4 named target
                                                                         });
                                                                         // Expand parent and add subfolder in single update
                                                                         // v7.6.0-alpha.11 (wave C) - place at top of the parent's children
@@ -17445,7 +17489,7 @@
                                                     childFolderIds: [],
                                                     collapsed: false
                                                 };
-                                                recordAction({ type: 'CREATE_FOLDER', folderId: newFolder.id, parentId: null, folder: { ...newFolder } });
+                                                recordAction({ type: 'CREATE_FOLDER', folderId: newFolder.id, parentId: null, folder: { ...newFolder }, label: `Create folder '${newFolder.name}'` }); // v7.8.0-alpha.4 named target
                                                 setFolders(prev => placeNewFoldersAtTop([...prev, newFolder], [newFolder])); // v7.6.0-alpha.11 (wave C)
                                                 navigateToFolder(newFolder.id);
                                                 setEditingFolderId(newFolder.id);
@@ -17574,7 +17618,8 @@
                                             type: 'CREATE_FOLDER',
                                             folderId: newFolder.id,
                                             parentId: folder.id,
-                                            folder: { ...newFolder }
+                                            folder: { ...newFolder },
+                                            label: `Create folder '${newFolder.name}'` // v7.8.0-alpha.4 named target
                                         });
                                         // v7.6.0-alpha.11 (wave C) - place at top of the parent's children
                                         setFolders(prev => placeNewFoldersAtTop([
@@ -17870,7 +17915,8 @@
                                                     recordAction({
                                                         type: 'COPY_PASTE_FOLDER',
                                                         newFolderIds: newFolders.map(f => f.id),
-                                                        parentId: folder.id
+                                                        parentId: folder.id,
+                                                        label: `Copy folder '${newFolders[0].name}'` // v7.8.0-alpha.4 named target
                                                     });
 
                                                     // v7.6.0-alpha.11 (wave C) - Strip inherited sortIndex from the top copy and place it
@@ -18100,7 +18146,7 @@
                             const ids = getSelectedBookIds();
                             if (!currentBookListId || ids.length === 0) return;
                             setBookLists(prev => prev.map(bl => bl.id === currentBookListId ? { ...bl, bookIds: (bl.bookIds || []).filter(id => !ids.includes(id)) } : bl));
-                            recordAction({ type: 'BOOKLIST_REMOVE', bookListId: currentBookListId, bookIds: ids });
+                            recordAction({ type: 'BOOKLIST_REMOVE', bookListId: currentBookListId, bookIds: ids, label: `Remove ${bookCountLabel(ids)} from '${(bookLists.find(b => b.id === currentBookListId) || {}).name || 'Book List'}'` }); // v7.8.0-alpha.4 named target
                             const bl = bookLists.find(b => b.id === currentBookListId);
                             setExplorerSelectedItems(new Set());
                             setExplorerBookContextMenu(null);
@@ -19201,7 +19247,7 @@
                                                         const bl = bookLists.find(b => b.id === blId);
                                                         const removedIds = (bl?.bookIds || []).filter(id => ids.includes(id));
                                                         setBookLists(prev => prev.map(b => b.id === blId ? { ...b, bookIds: (b.bookIds || []).filter(id => !ids.includes(id)) } : b));
-                                                        if (removedIds.length) recordAction({ type: 'BOOKLIST_REMOVE', bookListId: blId, bookIds: removedIds }); // v6.12.0 - undoable
+                                                        if (removedIds.length) recordAction({ type: 'BOOKLIST_REMOVE', bookListId: blId, bookIds: removedIds, label: `Remove ${bookCountLabel(removedIds)} from '${(bookLists.find(b => b.id === blId) || {}).name || 'Book List'}'` }); // v6.12.0 - undoable; v7.8.0-alpha.4 named target
                                                         const w = ids.length === 1 ? 'book' : 'books';
                                                         showToast(`Removed ${ids.length} ${w} from "${bl?.name || 'list'}"`);
                                                         setExplorerSelectedItems(new Set());
