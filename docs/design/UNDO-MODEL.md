@@ -54,9 +54,17 @@ Discard-on-close was proposed (cover view can't show fields reverting) and **rej
 - 7.6.0 doctrine: history dies when it would LIE (purged books, replaced libraries) — not when
   it's inconvenient to visualize.
 
-## Toast naming (7.8.0-alpha.4): every undo/redo names its target
+## Toast naming: every undo/redo names its target (alpha.4/5); action toasts = batch item 11
 
-The visibility answer that actually fits: toasts carry the target, everywhere —
 - Single-book actions: the book title ("Undone: edit to 'Bitter Gold Hearts'").
 - Bulk actions: honest aggregate ("Undid price goal for 4 books").
 - Folder/list actions: the folder/list name.
+
+**Scope note (2026-09-08)**: Ron's original ask was ALL toasts, everywhere. Undo/redo toasts
+shipped first (the recordAction chokepoint made them one auditable pass — alpha.4, completed by
+a mechanical zero-missing audit in alpha.5 after a missed second TOGGLE_HIDE site). The ACTION
+toasts (scattered showToast calls, no chokepoint) are deliberately deferred, NOT dropped —
+**filed as ownership-honesty batch item 11**: single-target action toasts name the target,
+bulk keep counts, explanatory clauses survive (e.g. the load-bearing "purchased" in the
+hide-instead toast). This split was originally made silently — caught, analyzed, and turned
+into the scope-narrowing rule (memory: feedback_scope_narrowing).

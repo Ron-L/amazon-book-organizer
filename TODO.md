@@ -11,7 +11,7 @@
 
 ## ⏸️ Ownership-honesty batch (ratified 2026-09-04, HELD — awaiting Ron's go; likely 7.8.0)
 
-Order: item 0 first (new code written against the clean predicate once), then the rest.
+Order: item 0 first ✓ (shipped in alphas 1-5 with the dialog/undo work), then **item 11 NEXT** (Ron 2026-09-08), then 1-9.
 Item 10 (reclamation retry) SHIPPED early as **7.7.2** (2026-09-07, proven live: dev reclaimed 27 runs;
 prod proof outstanding — first prod import should log `🧹 Reclaimed 7 absorbed bulk run(s)`, ~124MB).
 
@@ -24,6 +24,7 @@ prod proof outstanding — first prod import should log `🧹 Reclaimed 7 absorb
 - [ ] **6. Known-ASIN walked records become UPDATE events, not dup-skip discards** ([fetcher:1422-1425](../amazon-library-fetcher.js) seeds seenASINs with all known ASINs; live sample record for wishlisted Oath of Honor was thrown away 2026-09-04) — refresh ownershipType/acquisitionDate/binding from the record; wishlist→sample/borrow becomes visible (today invisible FOREVER for borrows — no pastPurchase backstop); never downgrade purchased (stale sample records in full fetches); newest-record-wins = record date vs STORED acquisitionDate; respect userEdited; acquisitionDate refresh also heals the watermark re-walk quirk. pastPurchase upgrade demoted to backstop.
 - [ ] **7. `TEMP_OWNERSHIP` gains `publicLibraryLending` + `audiblePlus`** (list written v4.11.8, never updated for v5.2.0's new types — loan→purchase can never upgrade; no-goal loans skipped by price phase)
 - [ ] **8. Docs**: wishlist model + transition matrix into a design doc (FORMAT-POLICY sibling) — never relitigate. ~~Divider between Move to / Copy to~~ (suspect exonerated by item 9's diagnosis).
+- [ ] **11. Action toasts name their targets** (NEXT UP — Ron 2026-09-08; the deferred half of "toasts name targets EVERYWHERE", split from the undo/redo pass with his blessing this time): single-target action toasts carry the book/folder/list name ("Hid 'Bitter Gold Hearts' (purchased — hides instead of deleting)"); bulk keep honest counts; explanatory clauses survive, naming adds to them. No chokepoint — scattered showToast calls — so the pass needs a systematic audit like alpha.5's (spot-fixes miss sites; sweeps with a checker don't). Ops-layer toasts (6.13.1) largely compliant already; the pass is for count-only stragglers.
 - [ ] **9. Relay-import Inbox placement: predicate must be "in no folder", not "new to the books DB"** (DIAGNOSED 2026-09-04: Ron's whole library — Inbox count 3076 — got Inbox-copied when Relay Import ran as a restore against the deleted books store on Sep-3; every book was "new to the DB" while the folders blob still filed them; js:4770/4824. Fix: filter newBookIds through getAllBookIdsInFolders() + skip isDeleted). Add restore-into-empty-DB to PRELAUNCH-TEST-GATE suite 4. ~~One-shot cleanup~~ RESOLVED 2026-09-04: Ron restored the 9/3 13:05 backup; count script showed only 4 genuine dual-filed stragglers (hand-cleaned). Retest this path after the fix (books-blob delete + relay restore ⇒ Inbox count unchanged).
 
 ---
